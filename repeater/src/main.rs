@@ -1,3 +1,7 @@
+#![no_std]
+
+use defmt::info;
+
 fn main() {
-    println!("Hello, world!");
+    info!("Hello, world!");
 }

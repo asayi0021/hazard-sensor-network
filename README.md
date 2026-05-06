@@ -3,7 +3,7 @@ Working repository for firmware development of Hazard Sensor Network project for
 
 For more details on the project visit: https://localhazardnetwork.netlify.app/
 
-This repository contains firmware code for both the sensor node and the repeater. Firmware is written for the RAK4630 module which houses a Nordic nRF52840 MCU and a Semtech SX1262 LoRa® transceiver. The repeater is also meant to intergrate into a network using the MeshCore platform.
+This repository contains firmware code for both the sensor node and the repeater. Firmware is written for the RAK4630 module, which houses a Nordic nRF52840 MCU and a Semtech SX1262 LoRa® transceiver, and the sensor hardware, which includes: SOME_SENSOR (Function A), SOME_SENSOR (Function B) and SOME_SENSOR (Function C). The repeater is also meant to intergrate into a network using the MeshCore platform.
 
 There are two separate binaries:
 `hazard-sensor` contains the binary for the hazard sensor node including firmware for all the sensors and the RAK module.

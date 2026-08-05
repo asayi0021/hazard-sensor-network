@@ -1,8 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\Cargo.toml
-workspace: C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\Cargo.toml
-   0.134625300s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\Ken Doan\\Documents\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.134691000s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-c255718e25715d01\bin-hazard-sensor`
+package:   C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\Cargo.toml
+workspace: C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\Cargo.toml
+   0.170201500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.173446600s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-4dfba5b3bdaba07e\bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -29,8 +29,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.147649900s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
-   0.147681600s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\cortex-m-67f2c5d42fffc861\lib-cortex_m`
+   0.209947900s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
+   0.211112700s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\cortex-m-8e1b42170284df0b\lib-cortex_m`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -58,8 +58,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.165804200s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
-   0.165835300s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-820e702cd3dbbcad\lib-embassy_executor`
+   0.230713900s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
+   0.230755600s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-291fa47286c05ae3\lib-embassy_executor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -87,8 +87,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.170287900s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
-   0.170317000s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-300afa6ec2e31f8a\lib-embassy_nrf`
+   0.234053700s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
+   0.234083800s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-2b0bd4ac95dc8f38\lib-embassy_nrf`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -116,8 +116,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.171357800s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-embedded-hal v0.6.0/Check { test: false }/TargetInner { ..: lib_target("embassy_embedded_hal", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-embedded-hal-0.6.0\\src\\lib.rs", Edition2024) }
-   0.171376700s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-embedded-hal-850a7d33fbe0c533\lib-embassy_embedded_hal`
+   0.246181300s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
+   0.246222400s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-960eaffd21d08ebe\lib-embassy_hal_internal`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -146,39 +146,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   0.175889300s  INFO prepare_target{force=false package_id=embassy-sync v0.8.0 target="embassy_sync"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-sync v0.8.0/Check { test: false }/TargetInner { ..: lib_target("embassy_sync", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-sync-0.8.0\\src\\lib.rs", Edition2024) }
-   0.175918700s  INFO prepare_target{force=false package_id=embassy-sync v0.8.0 target="embassy_sync"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-sync-478a3fa388269ae4\lib-embassy_sync`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_filter_source_repo
-  13: git_filter_source_repo
-  14: git_libgit2_prerelease
-  15: <unknown>
-  16: <unknown>
-  17: <unknown>
-  18: <unknown>
-  19: git_midx_writer_dump
-  20: git_filter_source_repo
-  21: git_midx_writer_dump
-  22: BaseThreadInitThunk
-  23: RtlUserThreadStart
-   0.182741700s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
-   0.182772000s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-3cd8bc8dc82d1919\lib-embassy_hal_internal`
+   0.253095700s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
+   0.253135600s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-1db5b0d0803261ca\lib-nrf_pac`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -207,38 +176,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   0.191522800s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
-   0.191563100s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-6acf2f29bff374fe\lib-nrf_pac`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_filter_source_repo
-  13: git_libgit2_prerelease
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: <unknown>
-  18: git_midx_writer_dump
-  19: git_filter_source_repo
-  20: git_midx_writer_dump
-  21: BaseThreadInitThunk
-  22: RtlUserThreadStart
-   0.196002700s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\Ken Doan\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
-   0.196030100s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\panic-probe-ee99723c8234e8bf\lib-panic_probe`
+   0.257196300s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
+   0.257254200s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\panic-probe-94aea5c104981aff\lib-panic_probe`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -266,8 +205,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.198225200s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\Ken Doan\\Documents\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.198265500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-526708396b79c6c6\test-bin-hazard-sensor`
+   0.259436100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.259647700s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-46b9ce2d7319cb8d\test-bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -294,36 +233,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.199068200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\Ken Doan\\Documents\\ANU\\ENGN4300\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
-   0.199091200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\repeater-cd8ac48f4a92f741\bin-repeater`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-   0.199725200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater)/Check { test: true }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\Ken Doan\\Documents\\ANU\\ENGN4300\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
-   0.199751000s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\repeater-0ae3e2323496e37c\test-bin-repeater`
+   0.260546200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
+   0.260594700s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\.fingerprint\repeater-99c370a3cea7f2de\bin-repeater`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -351,10 +262,7 @@ Stack backtrace:
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
     Checking cortex-m v0.7.7
-    Checking embassy-sync v0.8.0
-    Checking repeater v0.1.0 (C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\repeater)
-error: could not compile `repeater` (bin "repeater") due to 3 previous errors
+    Checking repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater)
+error: could not compile `repeater` (bin "repeater") due to 2 previous errors
 warning: build failed, waiting for other jobs to finish...
-error: could not compile `repeater` (bin "repeater" test) due to 1 previous error
 error: could not compile `cortex-m` (lib) due to 6 previous errors
-    Checking embassy-embedded-hal v0.6.0

@@ -1,8 +1,11 @@
 #![no_std]
 #![no_main]
 
-use {defmt_rtt as _, panic_probe as _};
+use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
 
+mod sensors;
+
+use sensors::wind_sensor;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::*;
@@ -34,7 +37,10 @@ impl NRF52840 {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let p = embassy_nrf::init(Default::default());
+    let mcu = NRF52840::new();
+
+    let ws = WindSensor::new(mcu.i2c);
+
 
     info!("Hello, world!");
 }

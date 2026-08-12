@@ -1,8 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   /Users/gandre/hazard-sensor-network/hazard-sensor/Cargo.toml
 workspace: /Users/gandre/hazard-sensor-network/Cargo.toml
-   0.330289063s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
-   0.330699438s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-d070a9c8c771ac5f/bin-hazard-sensor`
+   0.317076735s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
+   0.317460606s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-d070a9c8c771ac5f/bin-hazard-sensor`
 
 Caused by:
     No such file or directory (os error 2)

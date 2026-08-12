@@ -3,6 +3,9 @@
 
 use {defmt_rtt as _, panic_probe as _};
 
+mod sensors;
+
+use sensors::wind_sensor;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::*;
@@ -26,6 +29,8 @@ impl NRF52840 {
         // Initialize the TWIM driver
         let mut i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
 
+        todo!();
+
         NRF52840 {
             i2c,
         }
@@ -34,7 +39,9 @@ impl NRF52840 {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let p = embassy_nrf::init(Default::default());
+    let mcu = NRF52840::new();
+
+    let ws = wind_sensor::WindSensor::new(mcu.i2c);
 
     info!("Hello, world!");
 }

@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use {defmt_rtt as _, panic_probe as _};
+use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
 
 mod sensors;
 
@@ -29,8 +29,6 @@ impl NRF52840 {
         // Initialize the TWIM driver
         let mut i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
 
-        todo!();
-
         NRF52840 {
             i2c,
         }
@@ -41,7 +39,8 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
-    let ws = wind_sensor::WindSensor::new(mcu.i2c);
+    let ws = WindSensor::new(mcu.i2c);
+
 
     info!("Hello, world!");
 }

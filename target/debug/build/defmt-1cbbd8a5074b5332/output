@@ -1,0 +1,3 @@
+cargo:rustc-link-search=/Users/gandre/hazard-sensor-network/target/debug/build/defmt-1cbbd8a5074b5332/out
+cargo:rustc-check-cfg=cfg(c_variadic)
+cargo:rustc-check-cfg=cfg(no_cas)

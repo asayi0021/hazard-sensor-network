@@ -1,0 +1,5 @@
+cargo:rustc-link-lib=static=cortex-m
+cargo:rustc-link-search=/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/cortex-m-49a0a754739c075e/out
+cargo:rustc-cfg=cortex_m
+cargo:rustc-cfg=armv7m
+cargo:rustc-cfg=armv7em

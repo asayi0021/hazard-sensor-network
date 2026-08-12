@@ -1,0 +1,5 @@
+cargo:rustc-link-search=/Users/gandre/hazard-sensor-network/target/debug/build/hazard-sensor-60b7cd77a1ef63f5/out
+cargo:rerun-if-changed=memory.x
+cargo:rustc-link-arg-bins=--nmagic
+cargo:rustc-link-arg-bins=-Tlink.x
+cargo:rustc-link-arg-bins=-Tdefmt.x

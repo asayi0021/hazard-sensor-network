@@ -1,37 +1,37 @@
-use embassy_nrf::*;
 use defmt::debug;
+use embassy_nrf::*;
 
-pub struct WindSensor {
+pub struct WindSpeedSensor {
     port: twim::Twim<'static>,
     addr: u8,
 }
 
 pub enum SensorError {
     GetDataError,
-    I2cError(twim::Error),
+    UARTError(twim::Error),
 }
 
 impl From<twim::Error> for SensorError {
     fn from(value: twim::Error) -> Self {
-        SensorError::I2cError(value)
+        SensorError::UARTError(value)
     }
 }
 
-impl WindSensor {
+impl WindSpeedSensor {
     pub fn new(port: twim::Twim<'static>, addr: u8) -> Self {
         Self { port, addr }
     }
 
     pub fn write(&mut self, data: [u8; 3]) -> Result<(), SensorError> {
         self.port.blocking_write(self.addr, &data)?;
-        debug!("write to wind sensor: {:?}", data);
+        debug!("write to wind speed sensor: {:?}", data);
         Ok(())
     }
 
     pub fn read(&mut self) -> Result<[u8; 3], SensorError> {
         let mut read_buf = [0; 3];
         self.port.blocking_read(self.addr, &mut read_buf)?;
-        debug!("read from wind sensor: {:?}", read_buf);
+        debug!("read from wind speed sensor: {:?}", read_buf);
         Ok(read_buf)
     }
 
@@ -39,7 +39,7 @@ impl WindSensor {
         todo!()
     }
 
-    pub fn get_fault () -> Result<u16, SensorError> {
+    pub fn get_fault() -> Result<u16, SensorError> {
         todo!()
     }
 }

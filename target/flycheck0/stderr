@@ -1,8 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   /Users/gandre/hazard-sensor-network/hazard-sensor/Cargo.toml
 workspace: /Users/gandre/hazard-sensor-network/Cargo.toml
-   0.243125719s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
-   0.243164710s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-d070a9c8c771ac5f/bin-hazard-sensor`
+   0.175178343s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
+   0.175217813s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-d070a9c8c771ac5f/bin-hazard-sensor`
 
 Caused by:
     No such file or directory (os error 2)
@@ -27,34 +27,5 @@ Stack backtrace:
   16: std::rt::lang_start_internal
   17: _main
   18: <unknown>
-   0.279425380s  INFO prepare_target{force=false package_id=repeater v0.1.0 (/Users/gandre/hazard-sensor-network/repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (/Users/gandre/hazard-sensor-network/repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/repeater/src/main.rs", Edition2024) }
-   0.279440941s  INFO prepare_target{force=false package_id=repeater v0.1.0 (/Users/gandre/hazard-sensor-network/repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/repeater-e32d2ebdb66b7016/bin-repeater`
-
-Caused by:
-    No such file or directory (os error 2)
-
-Stack backtrace:
-   0: <std::backtrace::Backtrace>::create
-   1: <std::backtrace::Backtrace>::capture
-   2: cargo_util::paths::read_bytes
-   3: cargo_util::paths::read
-   4: cargo::core::compiler::fingerprint::_compare_old_fingerprint
-   5: cargo::core::compiler::fingerprint::prepare_target
-   6: cargo::core::compiler::compile
-   7: <cargo::core::compiler::build_runner::BuildRunner>::compile
-   8: cargo::ops::cargo_compile::compile_ws
-   9: cargo::ops::cargo_compile::compile_with_exec
-  10: cargo::ops::cargo_compile::compile
-  11: cargo::commands::check::exec
-  12: <cargo::cli::Exec>::exec
-  13: cargo::main
-  14: std::sys::backtrace::__rust_begin_short_backtrace::<fn(), ()>
-  15: std::rt::lang_start::<()>::{closure#0}
-  16: std::rt::lang_start_internal
-  17: _main
-  18: <unknown>
-    Checking repeater v0.1.0 (/Users/gandre/hazard-sensor-network/repeater)
     Checking hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)
-error: could not compile `repeater` (bin "repeater") due to 1 previous error
-warning: build failed, waiting for other jobs to finish...
 error: could not compile `hazard-sensor` (bin "hazard-sensor") due to 1 previous error; 3 warnings emitted

@@ -1,1 +1,1 @@
-pub mod wind_sensor;
+pub mod gas_sensor;

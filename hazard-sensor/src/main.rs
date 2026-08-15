@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
 
-use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
+use crate::sensors::gas_sensor::GasSensor;
+
+use {defmt_rtt as _, panic_probe as _};
 
 mod sensors;
 
-use sensors::wind_sensor;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::*;
@@ -19,6 +20,7 @@ static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
+    // uart1: uarte::Uarte<'static>,
 }
 
 impl NRF52840 {
@@ -27,10 +29,12 @@ impl NRF52840 {
         let config = twim::Config::default();
 
         // Initialize the TWIM driver
-        let mut i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
+        let i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
+        // let mut uart1 = uarte::Uarte::new(uarte, rxd, txd, irq, config);
 
         NRF52840 {
             i2c,
+            // uart1,
         }
     }
 }
@@ -39,7 +43,7 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
-    let ws = WindSensor::new(mcu.i2c);
+    let gas_sensor = GasSensor::new(mcu.i2c, 0x10);
 
 
     info!("Hello, world!");

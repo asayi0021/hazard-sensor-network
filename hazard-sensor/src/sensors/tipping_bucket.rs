@@ -2,17 +2,17 @@ use defmt::debug;
 use embassy_nrf::*;
 
 pub struct TippingBucket {
-    port: twim::Twim<'static>,
-    addr: u8,
+    parity: uarte::Parity,
+    baudrate: uarte::Baudrate,
 }
 
 pub enum SensorError {
     GetDataError,
-    UARTError(twim::Error),
+    UARTError(uarte::Error),
 }
 
-impl From<twim::Error> for SensorError {
-    fn from(value: twim::Error) -> Self {
+impl From<uarte::Error> for SensorError {
+    fn from(value: uarte::Error) -> Self {
         SensorError::UARTError(value)
     }
 }

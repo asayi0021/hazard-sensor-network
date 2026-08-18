@@ -1,10 +1,33 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\Cargo.toml
 workspace: C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\Cargo.toml
-   0.138961100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: stale: changed "C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\sensors\\gas_sensor.rs"
-   0.139013500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:           (vs) "C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\target\\thumbv7em-none-eabi\\debug\\.fingerprint\\hazard-sensor-2f37f92e0cbe659c\\dep-bin-hazard-sensor"
-   0.139023800s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:                FileTime { seconds: 13431532810, nanos: 246176200 } < FileTime { seconds: 13431533068, nanos: 668125800 }
-   0.139317000s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint dirty for hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.139356700s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleItem(ChangedFile { reference: "C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\target\\thumbv7em-none-eabi\\debug\\.fingerprint\\hazard-sensor-2f37f92e0cbe659c\\dep-bin-hazard-sensor", reference_mtime: FileTime { seconds: 13431532810, nanos: 246176200 }, stale: "C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\sensors\\gas_sensor.rs", stale_mtime: FileTime { seconds: 13431533068, nanos: 668125800 } }))
-    Checking hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.41s
+   0.229372300s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
+   0.229493800s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\thumbv7em-none-eabi\debug\.fingerprint\repeater-aa38636f6e3598e5\bin-repeater`
+
+Caused by:
+    The system cannot find the file specified. (os error 2)
+
+Stack backtrace:
+   0: git_midx_writer_dump
+   1: git_midx_writer_dump
+   2: git_midx_writer_dump
+   3: git_midx_writer_dump
+   4: git_filter_source_repo
+   5: git_filter_source_repo
+   6: git_filter_source_repo
+   7: git_filter_source_repo
+   8: git_filter_source_repo
+   9: git_filter_source_repo
+  10: git_filter_source_repo
+  11: git_libgit2_prerelease
+  12: <unknown>
+  13: <unknown>
+  14: <unknown>
+  15: <unknown>
+  16: git_midx_writer_dump
+  17: git_filter_source_repo
+  18: git_midx_writer_dump
+  19: BaseThreadInitThunk
+  20: RtlUserThreadStart
+    Checking repeater v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\repeater)
+error: could not compile `repeater` (bin "repeater") due to 1 previous error

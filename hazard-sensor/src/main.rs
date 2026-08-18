@@ -17,6 +17,7 @@ bind_interrupts!(struct Irqs {
 });
 
 static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
+const GAS_SENSOR_ADDR: u8 = 0x10;
 
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
@@ -43,7 +44,7 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
-    let gas_sensor = GasSensor::new(mcu.i2c, 0x10);
+    let gas_sensor = GasSensor::new(mcu.i2c, GAS_SENSOR_ADDR);
 
 
     info!("Hello, world!");

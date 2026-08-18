@@ -1,9 +1,11 @@
+//! Firmware for the BME680 gas sensor.
+//!
+//! Provides all the necessary functions for collecting temperature, pressure, air quality and humidity measurements.
+
 use embedded_hal::i2c::{Operation, Error, ErrorKind, SevenBitAddress};
-use defmt::debug;
+use defmt::{Format, debug, error, info};
 
-// Collects temperature, bVOC, humidity, pressure
-
-/// BME680 Gas Sensor
+/// BME680 Gas Sensor.
 pub struct GasSensor<I2C> {
     /// I2C bus from NRF52840
     i2c: I2C,
@@ -11,7 +13,10 @@ pub struct GasSensor<I2C> {
     addr: SevenBitAddress,
 }
 
-/// List of read/writable registers (and their address) on the gas sensor
+/// List of read/writable registers (and their address) on the gas sensor.
+/// For more details, see [BME680 datasheet][registers].
+///
+/// [registers]: https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme680-ds001.pdf
 pub enum Registers {
     Status = 0x73,
     Reset = 0xE0,
@@ -44,6 +49,18 @@ pub enum Registers {
     EasStatus0 = 0x1D,
 }
 
+/// Gas Sensor Modes.
+///
+/// During Sleep mode, no measurements are performed and there is minimal power consumption.
+///
+/// During Forced mode, a single TPHG (Temperature, Pressure, Humidty and Gas) is performed. Sensor automatically returns to sleep mode afterwards. Gas sensor heater only operates during gas measurement.
+pub enum GSMode {
+    Sleep,
+    Forced,
+}
+
+/// BME680 operation errors.
+#[derive(Format)]
 pub enum SensorError {
     GetDataError,
     I2cError(ErrorKind),
@@ -56,21 +73,54 @@ impl<E: Error> From<E> for SensorError {
 }
 
 impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
+    /// Initialise new gas sensor.
     pub fn new(i2c: I2C, addr: u8) -> Self {
         Self { i2c, addr }
     }
 
-    pub fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
+    /// Write to a register
+    fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
         self.i2c.transaction(self.addr, &mut [Operation::Write(&[reg_addr as u8]), Operation::Write(data)])?;
         debug!("write to wind sensor: {:?}", data);
         Ok(())
     }
 
-    pub fn read(&mut self, reg: Registers) -> Result<[u8; 3], SensorError> {
+    /// Read from a register
+    fn read(&mut self, reg: Registers) -> Result<[u8; 3], SensorError> {
         let mut read_buf = [0; 3];
         self.i2c.write_read(self.addr, &[reg as u8], &mut read_buf)?;
         debug!("read from wind sensor: {:?}", read_buf);
         Ok(read_buf)
+    }
+
+    /// Set
+    pub fn set_mode(&mut self, mode: GSMode) -> Result<(), SensorError>{
+        match mode {
+            GSMode::Forced => {
+                match self.write(Registers::CtrlMeas, &[1]) {
+                    Ok(_) => {
+                        debug!("Mode set to Forced");
+                        Ok(())
+                    },
+                    Err(e) => {
+                        error!("Could not set gas sensor mode to Forced: {:?}", e);
+                        Err(e)
+                    },
+                }
+            },
+            GSMode::Sleep => {
+                match self.write(Registers::CtrlMeas, &[0]) {
+                    Ok(_) => {
+                        debug!("Mode set to Sleep");
+                        Ok(())
+                    },
+                    Err(e) => {
+                        error!("Could not set gas sensor mode to Sleep: {:?}", e);
+                        Err(e)
+                    },
+                }
+            },
+        }
     }
 
     pub fn get_air_quality(&mut self) -> Result<u16, SensorError> {

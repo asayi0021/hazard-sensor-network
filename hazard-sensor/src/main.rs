@@ -1,18 +1,22 @@
 #![no_std]
 #![no_main]
 
-use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
+use {
+    crate::sensors::tipping_bucket::TippingBucket, core::error::Error, defmt_rtt as _,
+    panic_probe as _,
+};
 
 mod sensors;
 
-use sensors::wind_sensor;
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_nrf::*;
+use sensors::tipping_bucket;
 use static_cell::ConstStaticCell;
 
 bind_interrupts!(struct Irqs {
     TWISPI0 => twim::InterruptHandler<peripherals::TWISPI0>;
+    UARTE1  => uarte::InterruptHandler<peripherals::UARTE1>;
 });
 
 static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
@@ -29,9 +33,7 @@ impl NRF52840 {
         // Initialize the TWIM driver
         let mut i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
 
-        NRF52840 {
-            i2c,
-        }
+        NRF52840 { i2c }
     }
 }
 
@@ -40,7 +42,6 @@ async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
     let ws = WindSensor::new(mcu.i2c);
-
 
     info!("Hello, world!");
 }

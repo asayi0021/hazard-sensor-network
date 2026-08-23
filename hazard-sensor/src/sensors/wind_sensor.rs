@@ -1,6 +1,9 @@
+use crate::Irqs;
 use defmt::debug;
-use embassy_nrf::*;
-
+use embassy_nrf::{
+    Peri, peripherals,
+    uarte::{Baudrate, Config, Parity, Uarte},
+};
 pub struct WindSpeedSensor {
     port: twim::Twim<'static>,
     addr: u8,

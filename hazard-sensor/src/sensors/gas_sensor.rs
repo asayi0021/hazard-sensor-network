@@ -1,6 +1,8 @@
-//! Firmware for the BME680 gas sensor.
+//! Driver for the BME680 gas sensor.
 //!
 //! Provides all the necessary functions for collecting temperature, pressure, air quality and humidity measurements.
+
+use core::ptr::read;
 
 use embedded_hal::i2c::{Operation, Error, ErrorKind, SevenBitAddress};
 use defmt::{Format, debug, error, info};
@@ -17,6 +19,7 @@ pub struct GasSensor<I2C> {
 /// For more details, see [BME680 datasheet][registers].
 ///
 /// [registers]: https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme680-ds001.pdf
+#[derive(Format, Clone)]
 pub enum Registers {
     Status = 0x73,
     Reset = 0xE0,
@@ -78,22 +81,67 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
         Self { i2c, addr }
     }
 
-    /// Write to a register
+    /// Write to one or more registers
     fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
-        self.i2c.transaction(self.addr, &mut [Operation::Write(&[reg_addr as u8]), Operation::Write(data)])?;
-        debug!("write to wind sensor: {:?}", data);
+        let reg_cp = reg_addr.clone();
+        match self.i2c.transaction(self.addr, &mut [Operation::Write(&[reg_addr as u8]), Operation::Write(data)]) {
+            Ok(_) => {
+                debug!("write to register [{:?}]", reg_cp);
+                Ok(())
+            },
+            Err(e) => {
+                let err: SensorError = e.into();
+                error!("Could not write register [{:?}]: {:?}", reg_cp, err);
+                Err(err)
+            }
+        }
+    }
+
+    /// Read from a single register
+    fn read(&mut self, reg_addr: Registers) -> Result<u8, SensorError> {
+        let mut read_buf = [0];
+        let reg_cp = reg_addr.clone();
+        match self.i2c.write_read(self.addr, &[reg_addr as u8], &mut read_buf) {
+            Ok(_) => {
+                debug!("read from register [{:?}]: {:?}", reg_cp, read_buf);
+                Ok(read_buf[0])
+            },
+            Err(e) => {
+                let err: SensorError = e.into();
+                error!("Could not read register [{:?}]: {:?}", reg_cp, err);
+                Err(err)
+            }
+        }
+    }
+
+    /// Read from three registers in a single transaction
+    fn multi_read(&mut self, reg_addr: Registers) -> Result<[u8; 3], SensorError> {
+        let mut read_buf = [0; 3];
+        let reg_cp = reg_addr.clone();
+        match self.i2c.write_read(self.addr, &[reg_addr as u8], &mut read_buf) {
+            Ok(_) => {
+                debug!("read from register [{:?}]: {:?}", reg_cp, read_buf);
+                Ok(read_buf)
+            },
+            Err(e) => {
+                let err: SensorError = e.into();
+                error!("Could not read register [{:?}]: {:?}", reg_cp, err);
+                Err(err)
+            }
+        }
+    }
+
+    /// Initial configuration based on BME860 quick start guide
+    fn init_config(&mut self) -> Result<(), SensorError> {
+        // Set oversampling based on datasheet quick start guide
+        let ctrl_hum = self.read(Registers::CtrlHum)?;
+        let ctrl_hum_write = [ctrl_hum | 0b0000001, 0b01010100 as u8];
+        self.write(Registers::CtrlHum, &ctrl_hum_write)?;
+
         Ok(())
     }
 
-    /// Read from a register
-    fn read(&mut self, reg: Registers) -> Result<[u8; 3], SensorError> {
-        let mut read_buf = [0; 3];
-        self.i2c.write_read(self.addr, &[reg as u8], &mut read_buf)?;
-        debug!("read from wind sensor: {:?}", read_buf);
-        Ok(read_buf)
-    }
-
-    /// Set
+    /// Set operation mode
     pub fn set_mode(&mut self, mode: GSMode) -> Result<(), SensorError>{
         match mode {
             GSMode::Forced => {
@@ -124,6 +172,27 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     }
 
     pub fn get_air_quality(&mut self) -> Result<u16, SensorError> {
+        todo!()
+    }
+
+    pub fn get_temp(&mut self) -> Result<u16, SensorError> {
+        // Check if temp data is ready
+        // let temp_status = self.read(Register::)
+
+        // Starts with MSB register, then LSB, the XLSB
+        let temp_data = self.multi_read(Registers::TempMsb)?;
+
+
+
+        let final_temp: u16 = 0;
+        Ok(final_temp)
+    }
+
+    pub fn get_humidty(&mut self) -> Result<u16, SensorError> {
+        todo!()
+    }
+
+    pub fn get_pressure(&mut self) -> Result<u16, SensorError> {
         todo!()
     }
 

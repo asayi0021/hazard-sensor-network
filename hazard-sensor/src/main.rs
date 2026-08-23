@@ -44,8 +44,16 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
-    let gas_sensor = GasSensor::new(mcu.i2c, GAS_SENSOR_ADDR);
+    let mut gas_sensor =
+        GasSensor::new(mcu.i2c, GAS_SENSOR_ADDR).expect("Failed to init gas sensor");
+    match gas_sensor.init_config() {
+        Ok(_) => {}
+        Err(err) => panic!("Failed to init gas sensor: {:?}", err),
+    };
 
+    let temp = gas_sensor.get_temp();
+
+    info!("Temperature: {}", temp);
 
     info!("Hello, world!");
 }

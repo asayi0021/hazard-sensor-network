@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ReadCoils","ReadDiscreteInputs","ReadHoldings","ReadInputs","WriteHolding","WriteHoldings"]};

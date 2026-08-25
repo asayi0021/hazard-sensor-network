@@ -1,9 +1,14 @@
 use crate::Irqs;
+use async_modbus::client::read_inputs;
 use defmt::debug;
 use embassy_nrf::{
     Peri, peripherals,
     uarte::{self, Baudrate, Config, Parity, Uarte},
 };
+
+const RAIN_HOUR_HOLDING_REG: u16 = /* eHoldingRegRainHourSEN0575 address */;
+const TIME_RAINFALL_L_REG: u16 = /* eInputRegTimeRainFallLSEN0575 address */;
+
 //use nrf_pac::{radio::vals::State::Rx, wdt::regs::Config};
 //use nrf_pac::uarte::regs::Baudrate;
 
@@ -27,8 +32,8 @@ impl From<uarte::Error> for SensorError {
 }
 
 impl TippingBucket {
-    // Initialising the tipping bucket sensor
-    pub fn init_tipping_bucket(
+    // Initialising the uarte connection for the tipping bucket sensor
+    pub fn init_tipping_bucket_uarte(
         uarte1: Peri<'static, peripherals::UARTE1>,
         rx_pin: Peri<'static, peripherals::P0_09>, //Double check that this pin is correct
         tx_pin: Peri<'static, peripherals::P0_10>, //Double check that this pin is correct
@@ -41,15 +46,46 @@ impl TippingBucket {
         Ok(uart)
     }
 
+    // Initialising the modbus connection for the tipping bucket sensor
+    pub async fn init_tipping_bucket_modbus(
+        uart: &mut Uarte<'static>,
+    ) -> Result<(u32, u32), SensorError> {
+        let regs = read_inputs::<2, _>(&mut *uart, SLAVE_ADDR, PID_VID_REG).await?;
+
+        let reg0 = regs[0].get() as u32; // PID low word
+        let reg1 = regs[1].get() as u32; // VID + PID high bits, packed
+
+        let pid = ((reg1 & 0xC000) << 2) | reg0;
+        let vid = reg1 & 0x3FFF;
+
+        Ok((pid, vid))
+    }
+    // Initialising the tipping bucket sensor - higher level
+    pub async fn init_tipping_bucket(
+        uarte1: Peri<'static, peripherals::UARTE1>,
+        rx_pin: Peri<'static, peripherals::P0_09>, //Double check that this pin is correct
+        tx_pin: Peri<'static, peripherals::P0_10>, //Double check that this pin is correct
+    ) -> Result<Uarte<'static>, SensorError> {
+        let mut uart = init_tipping_bucket_uarte(uarte1, rx_pin, tx_pin)?;
+        let (pid, vid) = init_tipping_bucket_modbus(&mut uart).await?;
+
+        if pid != EXPECTED_PID || vid != EXPECTED_VID {
+            //find the expected values
+            return Err(SensorError::UnexpectedDevice); // check how errors should be handled
+        }
+
+        Ok(uart)
+    }
+
     // pub fn new(port: twim::Twim<'static>, addr: u8) -> Self {
     //     Self { port, addr }
     // }
 
-    pub async fn write(&mut self, data: [u8; 3]) -> Result<(), SensorError> {
-        self.port.blocking_write(self.addr, &data)?;
-        debug!("write to tipping bucket: {:?}", data);
-        Ok(())
-    }
+    // pub async fn write(&mut self, data: [u8; 3]) -> Result<(), SensorError> {
+    //     self.port.blocking_write(self.addr, &data)?;
+    //     debug!("write to tipping bucket: {:?}", data);
+    //     Ok(())
+    // }
 
     // pub async fn read(&mut self) -> Result<[u8; 3], SensorError> {
     //     let mut read_buf = [0; 3];
@@ -58,8 +94,19 @@ impl TippingBucket {
     //     Ok(read_buf)
     // }
 
-    pub fn get_tipping_bucket() -> Result<u16, SensorError> {
-        todo!()
+    // Gets the tipping bucket value from the sensor - specifially from the
+    pub async fn get_tipping_bucket(
+        uart: &mut Uarte<'static>,
+        slave_addr: u8,
+        hours: u8,
+    ) -> Result<f32, SensorError> {
+        write_holding(&mut *uart, slave_addr, RAIN_HOUR_HOLDING_REG, hours as u16).await?;
+
+        let regs = read_inputs::<2, _>(&mut *uart, slave_addr, TIME_RAINFALL_L_REG).await?;
+        let raw = (regs[1].get() as u32) << 16 | (regs[0].get() as u32);
+        let rainfall_mm = raw as f32 / 10000.0;
+
+        Ok(rainfall_mm)
     }
 
     pub fn get_fault() -> Result<u16, SensorError> {

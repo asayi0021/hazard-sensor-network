@@ -1,13 +1,13 @@
 use crate::Irqs;
-use async_modbus::client::read_inputs;
+use async_modbus::client::{read_inputs, write_holding};
 use defmt::debug;
 use embassy_nrf::{
     Peri, peripherals,
     uarte::{self, Baudrate, Config, Parity, Uarte},
 };
 
-const RAIN_HOUR_HOLDING_REG: u16 = /* eHoldingRegRainHourSEN0575 address */;
-const TIME_RAINFALL_L_REG: u16 = /* eInputRegTimeRainFallLSEN0575 address */;
+const RAIN_HOUR_HOLDING_REG: u16 = 0x0006;
+const TIME_RAINFALL_L_REG: u16 = 0x0006;
 
 //use nrf_pac::{radio::vals::State::Rx, wdt::regs::Config};
 //use nrf_pac::uarte::regs::Baudrate;
@@ -81,12 +81,14 @@ impl TippingBucket {
     //     Self { port, addr }
     // }
 
+    // Don't think a write function is needed, can just use the write_holding function from async_modbus
     // pub async fn write(&mut self, data: [u8; 3]) -> Result<(), SensorError> {
     //     self.port.blocking_write(self.addr, &data)?;
     //     debug!("write to tipping bucket: {:?}", data);
     //     Ok(())
     // }
 
+    // Don't think a read function is needed, can just use the read_inputs function from async_modbus
     // pub async fn read(&mut self) -> Result<[u8; 3], SensorError> {
     //     let mut read_buf = [0; 3];
     //     self.port.blocking_read(self.addr, &mut read_buf)?;
@@ -94,7 +96,7 @@ impl TippingBucket {
     //     Ok(read_buf)
     // }
 
-    // Gets the tipping bucket value from the sensor - specifially from the
+    // Gets the tipping bucket value from the sensor - specifially from the set time cumulative rainfall registers
     pub async fn get_tipping_bucket(
         uart: &mut Uarte<'static>,
         slave_addr: u8,

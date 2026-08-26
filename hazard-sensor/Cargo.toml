@@ -13,6 +13,8 @@ cortex-m-rt = "0.7.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 static_cell = "2.1.1"
 embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
+embassy-time = "0.5.1"
+embedded-hal-async = "1.0.0"
 
 [profile.dev]
 panic = "abort"

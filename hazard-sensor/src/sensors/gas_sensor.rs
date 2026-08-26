@@ -2,10 +2,9 @@
 //!
 //! Provides all the necessary functions for collecting temperature, pressure, air quality and humidity measurements.
 
-use core::{ptr::read, sync::atomic::AtomicBool};
-
 use defmt::{Format, debug, error, info};
-use embedded_hal::i2c::{Error, ErrorKind, Operation, SevenBitAddress};
+use embedded_hal_async::i2c::{Error, ErrorKind, Operation, SevenBitAddress};
+use embassy_time::Timer;
 
 /// BME680 Gas Sensor.
 pub struct GasSensor<I2C> {
@@ -45,6 +44,7 @@ pub struct CalibrationData {
     par_g3: i8,
     res_heat_range: u8,
     res_heat_val: i8,
+    range_switching_error: i8,
 }
 
 /// List of read/writable registers (and their address) on the gas sensor.
@@ -82,10 +82,27 @@ pub enum Registers {
     PresXlsb = 0x21,
     PressLsb = 0x20,
     PressMsb = 0x1F,
-    EasStatus0 = 0x1D,
+    MeasStatus0 = 0x1D,
     Calib1 = 0x00,
     Calib2 = 0xEB,
 }
+
+/// Look-up table 1 for gas resistance calculation, indexed by gas_range (0-15).
+/// Values taken directly from Bosch's BME680 reference driver / datasheet.
+const LOOKUP_TABLE_1: [u32; 16] = [
+    2147483647, 2147483647, 2147483647, 2147483647,
+    2147483647, 2126008810, 2147483647, 2130303777,
+    2147483647, 2147483647, 2143188679, 2136746228,
+    2147483647, 2126008810, 2147483647, 2147483647,
+];
+
+/// Look-up table 2 for gas resistance calculation, indexed by gas_range (0-15).
+const LOOKUP_TABLE_2: [u32; 16] = [
+    4096000000, 2048000000, 1024000000, 512000000,
+    255744255, 127110228, 64000000, 32258064,
+    16016016, 8000000, 4000000, 2000000,
+    1000000, 500000, 250000, 125000,
+];
 
 /// Gas Sensor Modes.
 ///
@@ -110,10 +127,10 @@ impl<E: Error> From<E> for SensorError {
     }
 }
 
-impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
+impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     /// Initialise new gas sensor.
-    pub fn new(mut i2c: I2C, addr: u8) -> Result<Self, SensorError> {
-        let calibration = match Self::read_calibration_raw(&mut i2c, addr) {
+    pub async fn new(mut i2c: I2C, addr: u8) -> Result<Self, SensorError> {
+        let calibration = match Self::read_calibration_raw(&mut i2c, addr).await {
             Ok(calibration) => calibration,
             Err(e) => {
                 error!("Failed to read calibration data.");
@@ -128,12 +145,12 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     }
 
     /// Write to one or more registers
-    fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
+    async fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
         let reg_cp = reg_addr.clone();
         match self.i2c.transaction(
             self.addr,
             &mut [Operation::Write(&[reg_addr as u8]), Operation::Write(data)],
-        ) {
+        ).await {
             Ok(_) => {
                 debug!("write to register [{:?}]", reg_cp);
                 Ok(())
@@ -147,12 +164,12 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     }
 
     /// Read from a single register
-    fn read(&mut self, reg_addr: Registers) -> Result<u8, SensorError> {
+    async fn read(&mut self, reg_addr: Registers) -> Result<u8, SensorError> {
         let mut read_buf = [0];
         let reg_cp = reg_addr.clone();
         match self
             .i2c
-            .write_read(self.addr, &[reg_addr as u8], &mut read_buf)
+            .write_read(self.addr, &[reg_addr as u8], &mut read_buf).await
         {
             Ok(_) => {
                 debug!("read from register [{:?}]: {:?}", reg_cp, read_buf);
@@ -167,9 +184,9 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     }
 
     /// Read from arbitrary amount of registers in a single transaction based on the given buffer size.
-    fn read_bytes(&mut self, start_reg: Registers, buf: &mut [u8]) -> Result<(), SensorError> {
+    async fn read_bytes(&mut self, start_reg: Registers, buf: &mut [u8]) -> Result<(), SensorError> {
         let reg_cp = start_reg.clone();
-        match self.i2c.write_read(self.addr, &[start_reg as u8], buf) {
+        match self.i2c.write_read(self.addr, &[start_reg as u8], buf).await {
             Ok(_) => {
                 debug!("read from register [{:?}]: {:?}", reg_cp, buf);
                 Ok(())
@@ -186,20 +203,22 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     /// Must be called once (e.g. from an `init()` step) before computing
     /// any res_heat_x value.
     /// Must pass in raw I2C bus and address since it is called before constructor is fully initialised.
-    fn read_calibration_raw(i2c: &mut I2C, addr: u8) -> Result<CalibrationData, SensorError> {
+    async fn read_calibration_raw(i2c: &mut I2C, addr: u8) -> Result<CalibrationData, SensorError> {
         // res_heat_val (0x00) and res_heat_range (bits 5:4 of 0x02)
-        let mut buf0 = [0u8; 3];
-        i2c.write_read(addr, &[0x00], &mut buf0)?;
+        let mut buf0 = [0u8; 4];
+        i2c.write_read(addr, &[0x00], &mut buf0).await?;
         let res_heat_val = buf0[0] as i8;
         let res_heat_range = (buf0[2] & 0x30) >> 4;
+        // dividing by 16 allows for sign extension
+        let range_switching_error = ((buf0[3] & 0xF0) as i8) / 16;
 
         // Coefficient block 1: registers 0x89..=0xA1 (25 bytes)
         let mut c1 = [0u8; 25];
-        i2c.write_read(addr, &[0x89], &mut c1)?;
+        i2c.write_read(addr, &[0x89], &mut c1).await?;
 
         // Coefficient block 2: registers 0xE1..=0xF0 (16 bytes)
         let mut c2 = [0u8; 16];
-        i2c.write_read(addr, &[0xE1], &mut c2)?;
+        i2c.write_read(addr, &[0xE1], &mut c2).await?;
 
         // --- Temperature ---
         let par_t1 = i16::from_le_bytes([c2[8], c2[9]]); // 0xE9, 0xEA
@@ -263,12 +282,13 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
             par_g3,
             res_heat_range,
             res_heat_val,
+            range_switching_error,
         })
     }
 
     /// Computes the res_heat_x register value using integer-only arithmetic,
     /// matching Bosch's official fixed-point reference implementation.
-    fn calc_res_heat(&mut self, target_temp_c: i32, amb_temp_c: i32) -> u8 {
+    async fn calc_res_heat(&mut self, target_temp_c: i32, amb_temp_c: i32) -> u8 {
         let var1 = ((amb_temp_c * self.calibration.par_g3 as i32) / 10) << 8;
         let var2 = (self.calibration.par_g1 as i32 + 784)
             * (((((self.calibration.par_g2 as i32 + 154009) * target_temp_c * 5) / 100) + 3276800)
@@ -284,7 +304,7 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
     /// Encodes a heating duration in milliseconds into the gas_wait_x register format:
     /// bits<5:0> = value (0-63), bits<7:6> = multiplier factor (00=x1, 01=x4, 10=x16, 11=x64).
     /// Max representable duration is 63 * 64 = 4032ms.
-    fn encode_gas_wait(duration_ms: u16) -> u8 {
+    async fn encode_gas_wait(duration_ms: u16) -> u8 {
         const MAX_DURATION_MS: u16 = 0xFC0; // 4032ms
 
         if duration_ms >= MAX_DURATION_MS {
@@ -304,36 +324,36 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
 
     /// Initial configuration based on BME860 quick start guide.
     /// Needs to be called after `new`.
-    pub fn init_config(&mut self) -> Result<(), SensorError> {
+    pub async fn init_config(&mut self) -> Result<(), SensorError> {
         // Set oversampling based on datasheet quick start guide
-        let ctrl_hum = self.read(Registers::CtrlHum)?;
-        let status = self.read(Registers::Status)?;
+        let ctrl_hum = self.read(Registers::CtrlHum).await?;
+        let status = self.read(Registers::Status).await?;
         // reg & !0b111 — clears the last 3 bits, leaves the top 5 untouched.
         // | — merges the cleared register with the masked new value.
         // Manual recommends to write all four oversampling settings in a single write operation.
         self.write(
             Registers::CtrlHum,
             &[(ctrl_hum & !0b111) | 0b001, status, 0b01010100],
-        )?;
+        ).await?;
 
         // Set hot plate temperature set-point to X and heating duration to 100ms.
-        let duration = Self::encode_gas_wait(150);
-        let amb_temp_c = self.get_temp()? as i32;
+        let duration = Self::encode_gas_wait(150).await;
+        let amb_temp_c = self.get_temp().await?[0];
         // 320C seems to be typical Bosch application target temperature
-        let res_heat = self.calc_res_heat(320, amb_temp_c);
-        self.write(Registers::GasWaitX, &[duration])?;
-        self.write(Registers::ResHeatX, &[res_heat])?;
+        let res_heat = self.calc_res_heat(320, amb_temp_c).await;
+        self.write(Registers::GasWaitX, &[duration]).await?;
+        self.write(Registers::ResHeatX, &[res_heat]).await?;
         // Configure sensor to use set-point 0 and enable gas measurement. (Writes to nv_conv<3:0> and run_gas_l)
-        let ctrl_gas_1 = self.read(Registers::CtrlGas1)?;
-        self.write(Registers::CtrlGas1, &[(ctrl_gas_1 & !0b11111) | 0b10000])?;
+        let ctrl_gas_1 = self.read(Registers::CtrlGas1).await?;
+        self.write(Registers::CtrlGas1, &[(ctrl_gas_1 & !0b11111) | 0b10000]).await?;
 
         Ok(())
     }
 
     /// Set operation mode
-    pub fn set_mode(&mut self, mode: GSMode) -> Result<(), SensorError> {
+    pub async fn set_mode(&mut self, mode: GSMode) -> Result<(), SensorError> {
         match mode {
-            GSMode::Forced => match self.write(Registers::CtrlMeas, &[1]) {
+            GSMode::Forced => match self.write(Registers::CtrlMeas, &[1]).await {
                 Ok(_) => {
                     debug!("Mode set to Forced");
                     Ok(())
@@ -343,7 +363,7 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
                     Err(e)
                 }
             },
-            GSMode::Sleep => match self.write(Registers::CtrlMeas, &[0]) {
+            GSMode::Sleep => match self.write(Registers::CtrlMeas, &[0]).await {
                 Ok(_) => {
                     debug!("Mode set to Sleep");
                     Ok(())
@@ -356,40 +376,59 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
         }
     }
 
-    /// Computes compensated gas sensor resitance output data in Ohms.
-    // Seems like IAQ is only provided through the BSEC software
-    fn get_air_quality(&mut self) -> Result<u16, SensorError> {
-        todo!()
+    /// Computes gas resistance (in Ohms) from raw ADC gas reading and gas_range.
+    async fn calc_gas_resistance(&self, gas_adc: u16, gas_range: u8) -> i32 {
+        let range_switching_error = self.calibration.range_switching_error as i64;
+        let gas_range = gas_range as usize;
+
+        let var1: i64 = ((1340 + (5 * range_switching_error))
+            * (LOOKUP_TABLE_1[gas_range] as i64))
+            >> 16;
+
+        let var2: i64 = ((gas_adc as i64) << 15) - (1i64 << 24) + var1;
+
+        let gas_res: i32 = ((((LOOKUP_TABLE_2[gas_range] as i64 * var1) >> 9) + (var2 >> 1)) / var2) as i32;
+
+        gas_res
     }
 
-    fn calc_temp(&mut self, temp_adc: i32) -> (i16, i32) {
-        let var1 = (temp_adc >> 3) - ((self.calibration.par_t1 as i32) << 1);
+    /// Computes compensated gas sensor resitance output data in Ohms.
+    // Seems like IAQ is only provided through the BSEC software
+    async fn get_gas_resistance(&mut self) -> Result<i32, SensorError> {
+        // Covers MSB (0x2A) and LSB (0x2B) registers for gas quality
+        let mut read_buf = [0; 2];
+        self.read_bytes(Registers::GasRMsb, &mut read_buf).await?;
+        let gas_adc: u16 = ((read_buf[0] as u16) << 2)
+            | ((read_buf[1] & 0b11000000) as u16 >> 6);
+        let gas_range = read_buf[1] & 0b00001111;
+        let final_res = self.calc_gas_resistance(gas_adc, gas_range).await;
+        Ok(final_res)
+    }
+
+    async fn calc_temp(&mut self, temp_adc: u32) -> [i32; 2] {
+        let var1 = (temp_adc as i32 >> 3) - ((self.calibration.par_t1 as i32) << 1);
         let var2 = (var1 * self.calibration.par_t2 as i32) >> 11;
         let var3 =
             ((((var1 >> 1) * (var1 >> 1)) >> 12) * ((self.calibration.par_t3 as i32) << 4)) >> 14;
         let t_fine = var2 + var3;
         let temp_comp = ((t_fine * 5) + 128) >> 8;
-        (temp_comp as i16, t_fine)
+        [temp_comp, t_fine]
     }
 
-    fn get_temp(&mut self) -> Result<i16, SensorError> {
-        // Check if temp data is ready
-        // let temp_status = self.read(Register::)
-
+    async fn get_temp(&mut self) -> Result<[i32; 2], SensorError> {
         // Covers MSB (0x22), LSB (0x23), XLSB (0x24) registers for temperature
         let mut read_buf = [0; 3];
-        self.read_bytes(Registers::TempMsb, &mut read_buf)?;
-        let temp_adc: i32 = ((read_buf[0] as i32) << 12)
-            | ((read_buf[1] as i32) << 4)
-            | ((read_buf[2] as i32) >> 4);
-        let final_temp = self.calc_temp(temp_adc);
-        Ok(final_temp.0)
+        self.read_bytes(Registers::TempMsb, &mut read_buf).await?;
+        let temp_adc: u32 = ((read_buf[0] as u32) << 12)
+            | ((read_buf[1] as u32) << 4)
+            | ((read_buf[2] as u32) >> 4);
+        let final_temp = self.calc_temp(temp_adc).await;
+        Ok(final_temp)
     }
 
-    /// Computes compensated humidity (in %) from raw ADC humidity and temp_comp
+    /// Computes compensated humidity (in milli%) from raw ADC humidity and temp_comp
     /// (the calculated temperature compensation value).
-    fn calc_humidity(&self, hum_adc: u16, temp_comp: i16) -> u32 {
-        let temp_scaled = temp_comp as i32;
+    async fn calc_humidity(&self, hum_adc: u16, temp_comp: i32) -> u32 {
         let par_h1 = self.calibration.par_h1 as i32;
         let par_h2 = self.calibration.par_h2 as i32;
         let par_h3 = self.calibration.par_h3 as i32;
@@ -398,17 +437,17 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
         let par_h6 = self.calibration.par_h6 as i32;
         let par_h7 = self.calibration.par_h7 as i32;
 
-        let var1 = (hum_adc as i32) - (par_h1 << 4) - (((temp_scaled * par_h3) / 100) >> 1);
+        let var1 = (hum_adc as i32) - (par_h1 << 4) - (((temp_comp * par_h3) / 100) >> 1);
 
         let var2 = (par_h2
-            * (((temp_scaled * par_h4) / 100)
-                + (((temp_scaled * ((temp_scaled * par_h5) / 100)) >> 6) / 100)
+            * (((temp_comp * par_h4) / 100)
+                + (((temp_comp * ((temp_comp * par_h5) / 100)) >> 6) / 100)
                 + (1 << 14)))
             >> 10;
 
         let var3 = var1 * var2;
 
-        let var4 = ((par_h6 << 7) + ((temp_scaled * par_h7) / 100)) >> 4;
+        let var4 = ((par_h6 << 7) + ((temp_comp * par_h7) / 100)) >> 4;
 
         let var5 = ((var3 >> 14) * (var3 >> 14)) >> 10;
 
@@ -419,14 +458,21 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
         hum_comp as u32
     }
 
-    fn get_humidity(&mut self) -> Result<i16, SensorError> {
-        todo!()
+    /// Returns compensated humidity in milli%, still need to divide data by 1000.
+    async fn get_humidity(&mut self, temp_comp: i32) -> Result<u32, SensorError> {
+        // Covers MSB (0x25) and LSB (0x26) registers for humidity
+        let mut read_buf = [0; 2];
+        self.read_bytes(Registers::HumMsb, &mut read_buf).await?;
+        let hum_adc: u16 = ((read_buf[0] as u16) << 8)
+            | (read_buf[1] as u16);
+        let final_hum = self.calc_humidity(hum_adc, temp_comp).await;
+        Ok(final_hum)
     }
 
     /// Computes compensated pressure (in Pa) from raw ADC pressure and t_fine
     /// (the intermediate value produced during temperature compensation).
     // From AI: Rust panics on integer overflow in debug builds (unlike C, which silently wraps). This formula is designed by Bosch to stay within i32 range for realistic sensor inputs, so it should be fine in practice — but if you ever do hit a panic here during testing, it's a legitimate signal that an upstream value (bad calibration read, corrupted ADC data) is out of the expected range, not something to just wrap around and ignore.
-    fn calc_pressure(&self, press_adc: u32, t_fine: i32) -> u32 {
+    async fn calc_pressure(&self, press_adc: u32, t_fine: i32) -> u32 {
         let par_p1 = self.calibration.par_p1 as i32;
         let par_p2 = self.calibration.par_p2 as i32;
         let par_p3 = self.calibration.par_p3 as i32;
@@ -472,16 +518,45 @@ impl<I2C: embedded_hal::i2c::I2c> GasSensor<I2C> {
         press_comp
     }
 
-    fn get_pressure(&mut self) -> Result<i16, SensorError> {
-        todo!()
+    async fn get_pressure(&mut self, t_fine: i32) -> Result<u32, SensorError> {
+        // Covers MSB (0x25) and LSB (0x26) registers for humidity
+        let mut read_buf = [0; 2];
+        self.read_bytes(Registers::HumMsb, &mut read_buf).await?;
+        let press_adc: u32 = ((read_buf[0] as u32) << 12)
+            | ((read_buf[1] as u32) << 4)
+            | ((read_buf[2] as u32) >> 4);
+        let final_press = self.calc_pressure(press_adc, t_fine).await;
+        Ok(final_press)
     }
 
-    pub fn get_measurements(&mut self) -> Result<(i16, i16, u16, u16), SensorError> {
-        self.check_if_ready()?;
-        todo!()
+    /// Check if measured data are ready to be read.
+    async fn check_if_ready(&mut self) -> Result<(), SensorError> {
+        loop {
+            let meas_status = self.read(Registers::MeasStatus0).await?;
+            if (meas_status & 0b00100000) == 1 {
+                return Ok(());
+            }
+            Timer::after_millis(100).await;
+        }
     }
 
-    pub fn check_if_ready(&mut self) -> Result<bool, SensorError> {
-        todo!()
+    pub async fn get_measurements(&mut self) -> Result<(i32, u32, u32, i32), SensorError> {
+        self.set_mode(GSMode::Forced).await?;
+        self.check_if_ready().await?;
+
+        let temperature = self.get_temp().await?;
+        let humidity = self.get_humidity(temperature[0]).await?;
+        let pressure = self.get_pressure(temperature[1]).await?;
+        let gas_res = self.get_gas_resistance().await?;
+
+        let mut air_quality = 0;
+        if gas_res < 100 {
+            air_quality = 0;
+        } else if (100..200).contains(&gas_res) {
+            air_quality = 1;
+        } else if gas_res >= 200 {
+            air_quality = 2;
+        }
+        Ok((temperature[0], humidity, pressure, air_quality))
     }
 }

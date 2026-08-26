@@ -1,8 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   /Users/gandre/hazard-sensor-network/hazard-sensor/Cargo.toml
 workspace: /Users/gandre/hazard-sensor-network/Cargo.toml
-   0.305738511s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
-   0.305944781s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-833d211fa1100555/bin-hazard-sensor`
+   0.105386535s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
+   0.105451876s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-833d211fa1100555/bin-hazard-sensor`
 
 Caused by:
     No such file or directory (os error 2)
@@ -27,8 +27,8 @@ Stack backtrace:
   16: std::rt::lang_start_internal
   17: _main
   18: <unknown>
-   0.336151647s  INFO prepare_target{force=false package_id=async-modbus v0.7.2 target="async_modbus"}: cargo::core::compiler::fingerprint: fingerprint error for async-modbus v0.7.2/Check { test: false }/TargetInner { ..: lib_target("async_modbus", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/lib.rs", Edition2024) }
-   0.336242822s  INFO prepare_target{force=false package_id=async-modbus v0.7.2 target="async_modbus"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/async-modbus-0152ccbe0b11bfcc/lib-async_modbus`
+   0.115588600s  INFO prepare_target{force=false package_id=async-modbus v0.7.2 target="async_modbus"}: cargo::core::compiler::fingerprint: fingerprint error for async-modbus v0.7.2/Check { test: false }/TargetInner { ..: lib_target("async_modbus", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/lib.rs", Edition2024) }
+   0.115613890s  INFO prepare_target{force=false package_id=async-modbus v0.7.2 target="async_modbus"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/async-modbus-0152ccbe0b11bfcc/lib-async_modbus`
 
 Caused by:
     No such file or directory (os error 2)
@@ -54,8 +54,8 @@ Stack backtrace:
   17: std::rt::lang_start_internal
   18: _main
   19: <unknown>
-   0.343228615s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v2.0.18/Check { test: false }/TargetInner { ..: lib_target("thiserror", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs", Edition2021) }
-   0.343284260s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/thiserror-f9f57edddd3f6207/lib-thiserror`
+   0.118562785s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint: fingerprint error for thiserror v2.0.18/Check { test: false }/TargetInner { ..: lib_target("thiserror", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs", Edition2021) }
+   0.118598378s  INFO prepare_target{force=false package_id=thiserror v2.0.18 target="thiserror"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/thiserror-f9f57edddd3f6207/lib-thiserror`
 
 Caused by:
     No such file or directory (os error 2)

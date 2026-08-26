@@ -6,6 +6,7 @@ use embassy_nrf::{
     uarte::{self, Baudrate, Config, Parity, Uarte},
 };
 
+// Make a enum for registers
 const RAIN_HOUR_HOLDING_REG: u16 = 0x0006;
 const TIME_RAINFALL_L_REG: u16 = 0x0006;
 
@@ -76,25 +77,6 @@ impl TippingBucket {
 
         Ok(uart)
     }
-
-    // pub fn new(port: twim::Twim<'static>, addr: u8) -> Self {
-    //     Self { port, addr }
-    // }
-
-    // Don't think a write function is needed, can just use the write_holding function from async_modbus
-    // pub async fn write(&mut self, data: [u8; 3]) -> Result<(), SensorError> {
-    //     self.port.blocking_write(self.addr, &data)?;
-    //     debug!("write to tipping bucket: {:?}", data);
-    //     Ok(())
-    // }
-
-    // Don't think a read function is needed, can just use the read_inputs function from async_modbus
-    // pub async fn read(&mut self) -> Result<[u8; 3], SensorError> {
-    //     let mut read_buf = [0; 3];
-    //     self.port.blocking_read(self.addr, &mut read_buf)?;
-    //     debug!("read from tipping bucket: {:?}", read_buf);
-    //     Ok(read_buf)
-    // }
 
     // Gets the tipping bucket value from the sensor - specifially from the set time cumulative rainfall registers
     pub async fn get_tipping_bucket(

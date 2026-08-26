@@ -1,1 +1,0 @@
-C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\thumbv7em-none-eabi\debug\hazard-sensor: C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\build.rs C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\memory.x C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\src\main.rs

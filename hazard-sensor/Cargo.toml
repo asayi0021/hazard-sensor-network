@@ -5,15 +5,15 @@ edition = "2024"
 
 [dependencies]
 defmt-rtt = "0.4"
-embassy-executor = { version = "0.7", features = ["arch-cortex-m", "executor-thread", "defmt"] }
-embassy-nrf = { version = "0.11.0", features = ["nrf52840"] }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "defmt"] }
+embassy-nrf = { version = "0.11.0", features = ["defmt", "nrf52840", "time-driver-rtc1"] }
 defmt = "1.1.1"
 cortex-m = { version = "0.7.6", features = ["inline-asm", "critical-section-single-core"] }
 cortex-m-rt = "0.7.0"
 panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 static_cell = "2.1.1"
 embedded-hal = { version = "1.0.0", features = ["defmt-03"] }
-embassy-time = "0.5.1"
+embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime"] }
 embedded-hal-async = "1.0.0"
 
 [profile.dev]

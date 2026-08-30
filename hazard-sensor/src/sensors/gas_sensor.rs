@@ -2,7 +2,7 @@
 //!
 //! Provides all the necessary functions for collecting temperature, pressure, air quality and humidity measurements.
 
-use defmt::{Format, debug, error, info};
+use defmt::{Format, debug, error, info, trace};
 use embedded_hal_async::i2c::{Error, ErrorKind, Operation, SevenBitAddress};
 use embassy_time::Timer;
 
@@ -133,7 +133,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let calibration = match Self::read_calibration_raw(&mut i2c, addr).await {
             Ok(calibration) => calibration,
             Err(e) => {
-                error!("Failed to read calibration data.");
+                error!("Failed to read calibration data: {}", e);
                 return Err(e);
             }
         };
@@ -147,12 +147,19 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     /// Write to one or more registers
     async fn write(&mut self, reg_addr: Registers, data: &[u8]) -> Result<(), SensorError> {
         let reg_cp = reg_addr.clone();
-        match self.i2c.transaction(
+
+        // Build one contiguous buffer: [register address, data...].
+        // 8 bytes is comfortably larger than any register write this driver performs.
+        let mut buf = [0u8; 8];
+        buf[0] = reg_addr as u8;
+        buf[1..1 + data.len()].copy_from_slice(data);
+
+        match self.i2c.write(
             self.addr,
-            &mut [Operation::Write(&[reg_addr as u8]), Operation::Write(data)],
+            &buf[..1 + data.len()],
         ).await {
             Ok(_) => {
-                debug!("write to register [{:?}]", reg_cp);
+                debug!("write to register [{:?}]: {:#010b}", reg_cp, data);
                 Ok(())
             }
             Err(e) => {
@@ -172,7 +179,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             .write_read(self.addr, &[reg_addr as u8], &mut read_buf).await
         {
             Ok(_) => {
-                debug!("read from register [{:?}]: {:?}", reg_cp, read_buf);
+                debug!("read from register [{:?}]: {:#010b}", reg_cp, read_buf);
                 Ok(read_buf[0])
             }
             Err(e) => {
@@ -188,7 +195,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let reg_cp = start_reg.clone();
         match self.i2c.write_read(self.addr, &[start_reg as u8], buf).await {
             Ok(_) => {
-                debug!("read from register [{:?}]: {:?}", reg_cp, buf);
+                debug!("read from register [{:?}]: {:#010b}", reg_cp, buf);
                 Ok(())
             }
             Err(e) => {
@@ -325,54 +332,49 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     /// Initial configuration based on BME860 quick start guide.
     /// Needs to be called after `new`.
     pub async fn init_config(&mut self) -> Result<(), SensorError> {
-        // Set oversampling based on datasheet quick start guide
+        // Set humidity oversampling
         let ctrl_hum = self.read(Registers::CtrlHum).await?;
-        let status = self.read(Registers::Status).await?;
-        // reg & !0b111 — clears the last 3 bits, leaves the top 5 untouched.
-        // | — merges the cleared register with the masked new value.
-        // Manual recommends to write all four oversampling settings in a single write operation.
-        self.write(
-            Registers::CtrlHum,
-            &[(ctrl_hum & !0b111) | 0b001, status, 0b01010100],
-        ).await?;
+        self.write(Registers::CtrlHum, &[(ctrl_hum & !0b111) | 0b001]).await?;
+
+        // Set temperature oversampling (osrs_t=2), pressure oversampling (osrs_p=5), mode=sleep
+        self.write(Registers::CtrlMeas, &[0b0101_0100]).await?;
+
+        let mut read_buf = [0; 3];
+        self.read_bytes(Registers::CtrlHum, &mut read_buf).await?;
+        trace!("oversampling registers: {:#010b}", read_buf);
 
         // Set hot plate temperature set-point to X and heating duration to 100ms.
         let duration = Self::encode_gas_wait(150).await;
-        let amb_temp_c = self.get_temp().await?[0];
-        // 320C seems to be typical Bosch application target temperature
-        let res_heat = self.calc_res_heat(320, amb_temp_c).await;
+        // 320C seems to be typical Bosch application target temperature, give it 25 degrees for default ambient temperature for set up.
+        let res_heat = self.calc_res_heat(320, 25).await;
         self.write(Registers::GasWaitX, &[duration]).await?;
         self.write(Registers::ResHeatX, &[res_heat]).await?;
         // Configure sensor to use set-point 0 and enable gas measurement. (Writes to nv_conv<3:0> and run_gas_l)
         let ctrl_gas_1 = self.read(Registers::CtrlGas1).await?;
-        self.write(Registers::CtrlGas1, &[(ctrl_gas_1 & !0b11111) | 0b10000]).await?;
+        self.write(Registers::CtrlGas1, &[(ctrl_gas_1 & !0b1_1111) | 0b1_0000]).await?;
 
         Ok(())
     }
 
     /// Set operation mode
     pub async fn set_mode(&mut self, mode: GSMode) -> Result<(), SensorError> {
-        match mode {
-            GSMode::Forced => match self.write(Registers::CtrlMeas, &[1]).await {
-                Ok(_) => {
-                    debug!("Mode set to Forced");
-                    Ok(())
+        let ctrl_meas = self.read(Registers::CtrlMeas).await?;
+        let new_value = match mode {
+            GSMode::Forced => (ctrl_meas & !0b11) | 0b01,
+            GSMode::Sleep => ctrl_meas & !0b11,
+        };
+        match self.write(Registers::CtrlMeas, &[new_value]).await {
+            Ok(_) => {
+                match mode {
+                    GSMode::Forced => debug!("Mode set to Forced"),
+                    GSMode::Sleep => debug!("Mode set to Sleep"),
                 }
-                Err(e) => {
-                    error!("Could not set gas sensor mode to Forced: {:?}", e);
-                    Err(e)
-                }
-            },
-            GSMode::Sleep => match self.write(Registers::CtrlMeas, &[0]).await {
-                Ok(_) => {
-                    debug!("Mode set to Sleep");
-                    Ok(())
-                }
-                Err(e) => {
-                    error!("Could not set gas sensor mode to Sleep: {:?}", e);
-                    Err(e)
-                }
-            },
+                Ok(())
+            }
+            Err(e) => {
+                error!("Could not set gas sensor mode: {:?}", e);
+                Err(e)
+            }
         }
     }
 
@@ -399,9 +401,10 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let mut read_buf = [0; 2];
         self.read_bytes(Registers::GasRMsb, &mut read_buf).await?;
         let gas_adc: u16 = ((read_buf[0] as u16) << 2)
-            | ((read_buf[1] & 0b11000000) as u16 >> 6);
-        let gas_range = read_buf[1] & 0b00001111;
+            | ((read_buf[1] & 0b1100_0000) as u16 >> 6);
+        let gas_range = read_buf[1] & 0b0000_1111;
         let final_res = self.calc_gas_resistance(gas_adc, gas_range).await;
+        info!("Gas resistance read success: {} Ohms", final_res);
         Ok(final_res)
     }
 
@@ -423,6 +426,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             | ((read_buf[1] as u32) << 4)
             | ((read_buf[2] as u32) >> 4);
         let final_temp = self.calc_temp(temp_adc).await;
+        info!("Temperature read success: {} centidegrees Celsius", final_temp[0]);
         Ok(final_temp)
     }
 
@@ -466,6 +470,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let hum_adc: u16 = ((read_buf[0] as u16) << 8)
             | (read_buf[1] as u16);
         let final_hum = self.calc_humidity(hum_adc, temp_comp).await;
+        info!("Humidity read success: {} milli%", final_hum);
         Ok(final_hum)
     }
 
@@ -519,13 +524,14 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     }
 
     async fn get_pressure(&mut self, t_fine: i32) -> Result<u32, SensorError> {
-        // Covers MSB (0x25) and LSB (0x26) registers for humidity
-        let mut read_buf = [0; 2];
-        self.read_bytes(Registers::HumMsb, &mut read_buf).await?;
+        // Covers MSB (0x1F), LSB (0x20) and XLSB (0x21) registers for humidity
+        let mut read_buf = [0; 3];
+        self.read_bytes(Registers::PressMsb, &mut read_buf).await?;
         let press_adc: u32 = ((read_buf[0] as u32) << 12)
             | ((read_buf[1] as u32) << 4)
             | ((read_buf[2] as u32) >> 4);
         let final_press = self.calc_pressure(press_adc, t_fine).await;
+        info!("Pressure read success: {} Pa", final_press);
         Ok(final_press)
     }
 
@@ -533,30 +539,43 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     async fn check_if_ready(&mut self) -> Result<(), SensorError> {
         loop {
             let meas_status = self.read(Registers::MeasStatus0).await?;
-            if (meas_status & 0b00100000) == 1 {
+            if (meas_status & 0b1000_0000) != 0 {
                 return Ok(());
             }
             Timer::after_millis(100).await;
         }
     }
 
-    pub async fn get_measurements(&mut self) -> Result<(i32, u32, u32, i32), SensorError> {
+    pub async fn get_measurements(&mut self) -> Result<(f64, f64, f64, u8), SensorError> {
+        info!("Starting GAS SENSOR measurement...");
         self.set_mode(GSMode::Forced).await?;
         self.check_if_ready().await?;
 
-        let temperature = self.get_temp().await?;
-        let humidity = self.get_humidity(temperature[0]).await?;
-        let pressure = self.get_pressure(temperature[1]).await?;
+        let temp = self.get_temp().await?;
+        // convert from centidegrees Celsius to Celsius
+        let temperature = temp[0] as f64 / 100.0;
+        // convert from milli% to %
+        let humidity = self.get_humidity(temp[0]).await? as f64 / 1000.0;
+        // convert from Pa to hPa
+        let pressure = self.get_pressure(temp[1]).await? as f64 / 100.0;
         let gas_res = self.get_gas_resistance().await?;
 
+        info!("GAS SENSOR measurements done!");
+
         let mut air_quality = 0;
-        if gas_res < 100 {
-            air_quality = 0;
-        } else if (100..200).contains(&gas_res) {
-            air_quality = 1;
-        } else if gas_res >= 200 {
-            air_quality = 2;
+        if gas_res >= 35000 {
+            air_quality = 0;    // clean
+        } else if (5000..35000).contains(&gas_res) {
+            air_quality = 1;    // polluted
+        } else if gas_res < 5000 {
+            air_quality = 2;    // heavily polluted
         }
-        Ok((temperature[0], humidity, pressure, air_quality))
+
+        info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", temperature, humidity, pressure, gas_res);
+
+        debug!("GAS SENSOR going to sleep...");
+        self.set_mode(GSMode::Sleep).await?;
+
+        Ok((temperature, humidity, pressure, air_quality))
     }
 }

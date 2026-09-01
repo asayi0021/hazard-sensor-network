@@ -1,9 +1,10 @@
 //! Driver for the BME680 gas sensor.
 //!
-//! Provides all the necessary functions for collecting temperature, pressure, air quality and humidity measurements.
+//! Provides all the necessary functions for collecting temperature, pressure,
+//! air quality and humidity measurements.
 
 use defmt::{Format, debug, error, info, trace};
-use embedded_hal_async::i2c::{Error, ErrorKind, Operation, SevenBitAddress};
+use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
 use embassy_time::Timer;
 
 /// BME680 Gas Sensor.
@@ -119,6 +120,7 @@ pub enum GSMode {
 pub enum SensorError {
     GetDataError,
     I2cError(ErrorKind),
+    InvalidParameter,
 }
 
 impl<E: Error> From<E> for SensorError {
@@ -149,8 +151,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let reg_cp = reg_addr.clone();
 
         // Build one contiguous buffer: [register address, data...].
-        // 8 bytes is comfortably larger than any register write this driver performs.
-        let mut buf = [0u8; 8];
+        let mut buf = [0u8; 2];
         buf[0] = reg_addr as u8;
         buf[1..1 + data.len()].copy_from_slice(data);
 
@@ -304,7 +305,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let var4 = var3 / (self.calibration.res_heat_range as i32 + 4);
         let var5 = (131 * self.calibration.res_heat_val as i32) + 65536;
         let res_heat_x100 = ((var4 / var5) - 250) * 34;
-        let res_heat_x = ((res_heat_x100 + 50) / 100);
+        let res_heat_x = (res_heat_x100 + 50) / 100;
         res_heat_x as u8
     }
 
@@ -546,6 +547,11 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         }
     }
 
+    /// Get all four measurement readings and convert them into a more readable unit.
+    /// Air quality index is currently an arbitrary unit ranging between 0-2.
+    /// 0 = Clean air, 1 = Polluted air, 2 = Heavily polluted air (sensor is saturated)
+    ///
+    /// The thresholds will need to be retuned after proper testing.
     pub async fn get_measurements(&mut self) -> Result<(f64, f64, f64, u8), SensorError> {
         info!("Starting GAS SENSOR measurement...");
         self.set_mode(GSMode::Forced).await?;
@@ -562,6 +568,9 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
 
         info!("GAS SENSOR measurements done!");
 
+        // Convert resistance value of gas measurement to an air quality index, based
+        // on the range of the resistance value. Thresholds are currently set through
+        // very basic testing.
         let mut air_quality = 0;
         if gas_res >= 35000 {
             air_quality = 0;    // clean
@@ -571,9 +580,9 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             air_quality = 2;    // heavily polluted
         }
 
-        info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", temperature, humidity, pressure, gas_res);
+        info!("Temperature: {} degrees Celsius, Humidity: {} r.H%, Pressure: {} hPa, Air Quality: {}", temperature, humidity, pressure, gas_res);
 
-        debug!("GAS SENSOR going to sleep...");
+        info!("GAS SENSOR going to sleep...");
         self.set_mode(GSMode::Sleep).await?;
 
         Ok((temperature, humidity, pressure, air_quality))

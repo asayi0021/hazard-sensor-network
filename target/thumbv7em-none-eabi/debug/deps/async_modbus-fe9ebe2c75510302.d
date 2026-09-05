@@ -1,0 +1,14 @@
+/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/deps/async_modbus-fe9ebe2c75510302.d: /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/lib.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/client.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/frame.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/pdu.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/../README.md /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/client.rs /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_req.rs /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_res.rs
+
+/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/deps/libasync_modbus-fe9ebe2c75510302.rmeta: /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/lib.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/client.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/frame.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/pdu.rs /Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/../README.md /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/client.rs /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_req.rs /Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_res.rs
+
+/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/lib.rs:
+/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/client.rs:
+/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/frame.rs:
+/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/pdu.rs:
+/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/async-modbus-0.7.2/src/../README.md:
+/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/client.rs:
+/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_req.rs:
+/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out/pdu_res.rs:
+
+# env-dep:OUT_DIR=/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/async-modbus-541f8d837578858a/out

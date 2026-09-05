@@ -1,0 +1,5 @@
+cargo:rustc-link-search=/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/build/hazard-sensor-7c7200bff5a7d350/out
+cargo:rerun-if-changed=memory.x
+cargo:rustc-link-arg-bins=--nmagic
+cargo:rustc-link-arg-bins=-Tlink.x
+cargo:rustc-link-arg-bins=-Tdefmt.x

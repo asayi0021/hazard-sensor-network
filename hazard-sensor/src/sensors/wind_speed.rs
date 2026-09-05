@@ -9,11 +9,7 @@ use embassy_nrf::{Peri, bind_interrupts, peripherals};
 
 // MD0550 Wind Speed Sensor
 pub struct WindSpeed {
-    //     //
-    //     parity: uarte::Parity,
-    //     //
-    //     baudrate: uarte::Baudrate,
-    //     //
+    saadc: Saadc,
 }
 
 // pub enum SensorError {
@@ -22,7 +18,7 @@ pub struct WindSpeed {
 //     UnexpectedDevice,
 // }
 
-pub const WIND_SPEED_CHANNEL: usize = 0;
+pub const WIND_SPEED_CHANNEL: usize = 0; //Confirm ADC wiring
 
 impl From<uarte::Error> for SensorError {
     fn from(value: uarte::Error) -> Self {

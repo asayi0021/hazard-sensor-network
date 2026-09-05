@@ -1,1 +1,0 @@
-{"rustc":15660806296293705835,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[16952856551346143676,"build_script_build",false,15238007357303039279]],"local":[{"RerunIfChanged":{"output":"thumbv7em-none-eabi/debug/build/async-modbus-f1ddb6b00ced7f15/output","paths":["build.rs"]}}],"rustflags":[],"config":0,"compile_kind":0}

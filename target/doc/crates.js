@@ -1,2 +1,0 @@
-window.ALL_CRATES = ["async_modbus","bare_metal","bitfield","cfg_if","crc","crc_catalog","critical_section","defmt_or_log","defmt_or_log_macros","embedded_io","embedded_io_async","proc_macro2","quote","syn","thiserror","thiserror_impl","unicode_ident","vcell","zerocopy","zerocopy_derive"];
-//{"start":21,"fragment_lengths":[14,13,11,9,6,14,19,15,22,14,20,14,8,6,12,17,16,8,11,18]}

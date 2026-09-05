@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"fn":["read_coils","read_coils_with","read_discrete_inputs","read_discrete_inputs_with","read_holdings","read_holdings_with","read_inputs","read_inputs_with","write_holding","write_holding_with","write_holdings","write_holdings_with"]};

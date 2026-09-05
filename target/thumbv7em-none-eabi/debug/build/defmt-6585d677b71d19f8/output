@@ -1,3 +1,0 @@
-cargo:rustc-link-search=C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\thumbv7em-none-eabi\debug\build\defmt-6585d677b71d19f8\out
-cargo:rustc-check-cfg=cfg(c_variadic)
-cargo:rustc-check-cfg=cfg(no_cas)

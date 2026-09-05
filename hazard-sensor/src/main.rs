@@ -24,32 +24,34 @@ bind_interrupts!(struct Irqs {
     SAADC => saadc::InterruptHandler;
 });
 
-fn init_adc(
-    saadc: Peri<'static, peripherals::SAADC>,
-    soil_moisture_pin: Peri<'static, peripherals::P0_02>, // confirm actual RAK4631 mapping
-    wind_speed_pin: Peri<'static, peripherals::P0_03>,    // confirm actual RAK4631 mapping
-) -> Saadc<'static, 2> {
-    let config = Config::default();
-    let channel0 = ChannelConfig::single_ended(soil_moisture_pin);
-    let channel1 = ChannelConfig::single_ended(wind_speed_pin);
-    Saadc::new(saadc, Irqs, config, [channel0, channel1])
-}
-
 static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
+    saadc: Saadc<'static, 2>,
 }
 
 impl NRF52840 {
     pub fn new() -> Self {
         let p = embassy_nrf::init(Default::default());
-        let config = twim::Config::default();
+        let twim_config = twim::Config::default();
+
+        let adc_config = saadc::Config::default();
+        let channel0 = ChannelConfig::single_ended(soil_moisture_pin);
+        let channel1 = ChannelConfig::single_ended(wind_speed_pin);
+        let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
 
         // Initialize the TWIM driver
-        let mut i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, config, TX_BUFF.take());
+        let mut i2c = twim::Twim::new(
+            p.TWISPI0,
+            Irqs,
+            p.P0_13,
+            p.P0_14,
+            twim_config,
+            TX_BUFF.take(),
+        );
 
-        NRF52840 { i2c }
+        NRF52840 { i2c, saadc }
     }
 }
 
@@ -58,6 +60,8 @@ async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
     let ws = WindSensor::new(mcu.i2c);
+
+    let adc = AdcSensors::new(mcu.saadc);
 
     info!("Hello, world!");
 }

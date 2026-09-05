@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["client","pdu"],"struct":["Frame","FrameBuilder","FrameView","PduView"]};

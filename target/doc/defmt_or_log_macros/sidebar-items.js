@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"attr":["derive_format_or_debug","maybe_derive_debug","maybe_derive_format"]};

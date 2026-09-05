@@ -2,8 +2,8 @@
 #![no_main]
 
 use {
-    crate::sensors::soil_moisture::SoilMoisture, crate::sensors::tipping_bucket::TippingBucket,
-    core::error::Error, defmt_rtt as _, panic_probe as _,
+    crate::sensors::tipping_bucket::TippingBucket, core::error::Error, defmt_rtt as _,
+    panic_probe as _,
 };
 
 mod sensors;
@@ -14,8 +14,7 @@ use embassy_nrf::{
     saadc::{ChannelConfig, Config, Saadc},
     *,
 };
-use sensors::soil_moisture;
-use sensors::tipping_bucket;
+use sensors::adc_sensors::AdcSensors;
 use static_cell::ConstStaticCell;
 
 bind_interrupts!(struct Irqs {
@@ -37,9 +36,9 @@ impl NRF52840 {
         let twim_config = twim::Config::default();
 
         let adc_config = saadc::Config::default();
-        let channel0 = ChannelConfig::single_ended(soil_moisture_pin);
-        let channel1 = ChannelConfig::single_ended(wind_speed_pin);
-        let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
+        let channel0 = ChannelConfig::single_ended(p.P0_02); //Double check pins
+        let channel1 = ChannelConfig::single_ended(p.P0_03); //Double check pins
+        let saadc = Saadc::new(p.SAADC, Irqs, adc_config, [channel0, channel1]);
 
         // Initialize the TWIM driver
         let mut i2c = twim::Twim::new(
@@ -58,8 +57,6 @@ impl NRF52840 {
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
-
-    let ws = WindSensor::new(mcu.i2c);
 
     let adc = AdcSensors::new(mcu.saadc);
 

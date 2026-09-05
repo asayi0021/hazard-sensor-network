@@ -9,32 +9,18 @@ use embassy_nrf::{Peri, bind_interrupts, peripherals};
 
 // SEN0193 Capacitive Soil Moisture Sensor
 pub struct AdcSensors {
-    saadc: Saadc,
+    saadc: Saadc<'static, 2>,
 }
 
-// pub enum SensorError {
-//     GetDataError,
-//     UARTError(uarte::Error),
-//     UnexpectedDevice,
-// }
+pub enum SensorError {
+    GetDataError,
+}
 
 pub const SOIL_MOISTURE_CHANNEL: usize = 0; //Confirm ADC wiring
-pub const WIND_SPEED_CHANNEL: usize = 0; //Confirm ADC wiring
-
-impl From<uarte::Error> for SensorError {
-    fn from(value: uarte::Error) -> Self {
-        SensorError::UARTError(value)
-    }
-}
-
-impl From<read_inputs> for SensorError {
-    fn from(value: uarte::Error) -> Self {
-        SensorError(value)
-    }
-}
+pub const WIND_SPEED_CHANNEL: usize = 1; //Confirm ADC wiring
 
 impl AdcSensors {
-    fn new(saadc: Peri<'static, peripherals::SAADC>, // confirm actual RAK4631 mapping
+    pub fn new(saadc: Saadc<'static, 2>, // confirm actual RAK4631 mapping
     ) -> Self {
         Self { saadc }
     }

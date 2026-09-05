@@ -1,9 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   /Users/gandre/hazard-sensor-network/hazard-sensor/Cargo.toml
 workspace: /Users/gandre/hazard-sensor-network/Cargo.toml
-   0.387735295s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `defmt_macros` is newer than we are 1788587672.915517450s > 1788581966.816712991s "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-1.1.1"
-   0.406371125s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
-   0.406420230s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-446ab7274b498354/bin-hazard-sensor`
+   0.125620291s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
+   0.125675410s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-446ab7274b498354/bin-hazard-sensor`
 
 Caused by:
     No such file or directory (os error 2)
@@ -28,25 +27,5 @@ Stack backtrace:
   16: std::rt::lang_start_internal
   17: _main
   18: <unknown>
-   0.434976796s  INFO prepare_target{force=false package_id=defmt v1.1.1 target="defmt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt v1.1.1/Check { test: false }/TargetInner { ..: lib_target("defmt", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-1.1.1/src/lib.rs", Edition2021) }
-   0.435639190s  INFO prepare_target{force=false package_id=defmt v1.1.1 target="defmt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(34), dep_mtime: FileTime { seconds: 1788587672, nanos: 915517450 }, max_mtime: FileTime { seconds: 1788581966, nanos: 816712991 } })
-   0.438075714s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="defmt_macros"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-macros v1.1.1/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("defmt_macros", ["proc-macro"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-macros-1.1.1/src/lib.rs", Edition2021) }
-   0.438092382s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="defmt_macros"}: cargo::core::compiler::fingerprint:     dirty: UnitDependencyInfoChanged { unit: UnitIndex(35) }
-   0.438626633s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-macros v1.1.1/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-macros-1.1.1/build.rs", Edition2021) }
-   0.438640574s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="build-script-build"}: cargo::core::compiler::fingerprint:     dirty: EnvVarChanged { name: "DEFMT_LOG", old_value: Some("trace"), new_value: None }
-   0.440247052s  INFO prepare_target{force=false package_id=defmt-rtt v0.4.2 target="defmt_rtt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-rtt v0.4.2/Check { test: false }/TargetInner { ..: lib_target("defmt_rtt", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-rtt-0.4.2/src/lib.rs", Edition2021) }
-   0.440264656s  INFO prepare_target{force=false package_id=defmt-rtt v0.4.2 target="defmt_rtt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(30) })
-   0.441254235s  INFO prepare_target{force=false package_id=defmt v0.3.100 target="defmt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt v0.3.100/Check { test: false }/TargetInner { ..: lib_target("defmt", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/defmt-0.3.100/src/lib.rs", Edition2021) }
-   0.441270384s  INFO prepare_target{force=false package_id=defmt v0.3.100 target="defmt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(31) })
-   0.442986848s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-executor-0.7.0/src/lib.rs", Edition2021) }
-   0.443008873s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(30) })
-   0.465419530s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint dirty for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/panic-probe-1.0.0/src/lib.rs", Edition2021) }
-   0.465442504s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(31) })
-   Compiling defmt-macros v1.1.1
-    Checking defmt v1.1.1
-    Checking defmt v0.3.100
-    Checking panic-probe v1.0.0
-    Checking defmt-rtt v0.4.2
-    Checking embassy-executor v0.7.0
     Checking hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)
-error: could not compile `hazard-sensor` (bin "hazard-sensor") due to 41 previous errors; 23 warnings emitted
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.55s

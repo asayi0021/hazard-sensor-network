@@ -2,15 +2,15 @@
 #![no_main]
 
 use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
-use crate::network::{BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM, Packet, NodeIdHash, PayloadType, RouteType};
-// use {crate::newtork::...} Other functions from network will be needed
+use crate::network::{BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, MAX_PAYLOAD_LEN, PUBLIC_CHANNEL_KEY, Packet, PayloadType, RouteType, SPREADING_FACTOR, TX_POWER_DBM};
 
 mod sensors;
 mod network;
+mod network_testing;
 
-// use cortex_m::delay::Delay;
+// use cortex_m::delay::Delay; // Caused delay import overlap, not used in network firmware
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel; // Need to resolve channel import overlap
+use embassy_sync::channel::Channel;
 use embassy_nrf::gpio::{Level, Output, OutputDrive, Input, Pull};
 use sensors::wind_sensor;
 use defmt::{info, warn};
@@ -38,7 +38,7 @@ static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 // static MESHCORE_RX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
 
 // Initialise tx packet buffer
-static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
+pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
 // NoopRawMutex has sync error from use in main (async) and radio_task (async)
 // static MESHCORE_TX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
 // MESHCORE_TX_BUFF: Defines packet transmission buffer where each packet is 256 (u8) 
@@ -86,8 +86,8 @@ impl SX1262 {
         reset: Peri<'static, peripherals::P1_06>, 
         busy: Peri<'static, peripherals::P1_14>, 
         dio1: Peri<'static, peripherals::P1_15>, 
-        rf_tx_en: Peri<'static, peripherals::P1_07>,
-        rf_rx_en: Peri<'static, peripherals::P1_05>,
+        rf_tx_en: Peri<'static, peripherals::P1_07>, // In RAK4630 datasheet, the DIO2 is used to control antenna switch,
+        rf_rx_en: Peri<'static, peripherals::P1_05>, //and that the GPIO 1.07 pin should not be initialised.
         // spi bus pins
         spi3: Peri<'static, peripherals::SPI3>,
         sck: Peri<'static, peripherals::P1_11>,
@@ -113,7 +113,7 @@ impl SX1262 {
         // Setup Sx1262 config
         let sx1262_config = sx126x::Config {
             chip: Sx1262,
-            tcxo_ctrl: Some(sx126x::TcxoCtrlVoltage::Ctrl1V8),
+            tcxo_ctrl: Some(sx126x::TcxoCtrlVoltage::Ctrl1V8), // Pin is dio3
             use_dcdc: true, //use_dio2_as_rfswitch - deprecated format for lora-phy
             rx_boost: true, //rx boost useful?
         };
@@ -202,64 +202,55 @@ async fn main(_spawner: Spawner) {
     // Start async radio task - buffers global therefore dont need to be passed 
     _spawner.spawn(radio_task(radio)).unwrap();
     
-    // TESTING LOOP 
-    // Testing data
+    //---TESTING LOOPS---------------------------------------------------------
+    // Testing data - testing data now built into reply functions 
     let wss_data: i16 = 1;
     let wds_data: u16 = 2;
     let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
     let sms_data: i16 = 4;
     let tbs_data: f32 = 5.0;
 
-    // Loop simulated data packet as origin 
+    // --- ROLE: modal periodic requester ---
+    // loop {
+    //     Timer::after(Duration::from_secs(10)).await;
+    //
+    //     // --- Raw custom request testing block ---
+    //     // if let Err(e) = network_testing::send_request_raw_custom() {
+    //     //     warn!("failed to send RawCustom request: {:?}", defmt::Debug2Format(&e));
+    //     // }
+
+    //     // --- Public-channel request testing block ---
+    //     if let Err(e) = network_testing::send_request_group_text() {
+    //         warn!("failed to send GRP_TXT request: {:?}", defmt::Debug2Format(&e));
+    //     } else {
+    //         info!("public channel data request sent");
+    //     }
+    // }
+
+    // --- ROLE: sensor node broadcaster --- 
     loop {
-        Timer::after(Duration::from_secs(10)).await;
-        // Prepare encoded payload
-        let json = match Packet::encode_payload(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
-            Ok(json) => json,
-            Err(e) => {
-                warn!("failed to encode sensor payload in main testing loop: {:?}", defmt::Debug2Format(&e));
-                continue;
-            }
-        };
-        // Prepare original outgoing packet
-        let test_packet = match Packet::originate(RouteType::Flood, PayloadType::RawCustom, json.as_bytes()) {
-            Ok(pkt) => pkt,
-            Err(e) => {
-                warn!("failed to originate packet: {:?}", defmt::Debug2Format(&e));
-                continue;
-            }
-        };
+        Timer::after(Duration::from_secs(15)).await;
 
-        // Encode packet to buf - CHANGE THIS WITH GLOBAL BUF
-        let mut buf = [0u8; MAX_PACKET_LEN];
-        let len = match test_packet.encode(&mut buf) {
-            Ok(len) => len,
-            Err(e) => {
-                warn!("failed to encode packet: {:?}", defmt::Debug2Format(&e));
-                continue;
-            }
-        };
+        // --- Raw custom broadcast testing block --- 
+        // if let Err(e) = network::send_sensor_broadcast(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+        //     warn!("failed to send sensor broadcast: {:?}", defmt::Debug2Format(&e));
+        // }
 
-        // Extend packet to full frame
-        let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
-        if frame.extend_from_slice(&buf[..len]).is_err() {
-            warn!("encoded frame too large for tx queue slot");
-            continue;
-        }
-
-        // Try to send the formed frame
-        if MESHCORE_TX_BUFF.try_send(frame).is_err() {
-            warn!("tx queue full, dropping test packet");
+        // --- Public-channel broadcast testing block --- 
+        if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+            warn!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
+        } else {
+            info!("public channel broadcast sent");
         }
     }
+
 }
 
+/// radio_task drains the MESHCORE_TX_BUFF when it is not empty, and calls 
+/// frame_handler when anything is recieved by the transceiver. 
 #[embassy_executor::task]
 async fn radio_task(
     mut radio: SX1262,
-    // Buffers no longner global and may need to be passed in 
-        // mut meshcore_tx_buff: [u8; 255],
-        // mut meshcore_rx_buff: [[u8; 255]; 3],
 ){
 
     // Initialise rx pkt parameters - non-default 
@@ -268,7 +259,7 @@ async fn radio_task(
     // }
     
 
-    // Initialise recieved packet buffer locally - channel format deprecated 
+    // Initialise recieved packet buffer locally - possible issue 
     let mut meshcore_rx_buf = [0u8; MAX_PACKET_LEN];
 
     loop{
@@ -284,7 +275,7 @@ async fn radio_task(
             Ok((len,status)) => {
                 let data = &meshcore_rx_buf[..len as usize];
                 info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
-                handle_received(data);
+                frame_handler(data);
             }
             Err(e) => {
                 warn!("radio rx error {:?}", defmt::Debug2Format(&e));
@@ -293,7 +284,7 @@ async fn radio_task(
     }
 }
 
-/// Send a frame - MeshCore packet inside LoRa envelope 
+/// Send a frame - MeshCore packet inside LoRa frame - may move to network.rs for clarity
 async fn send_frame(
     radio: &mut SX1262,
     frame: &[u8],
@@ -313,8 +304,8 @@ async fn send_frame(
 }
 
 /// Process incoming packet data
-pub fn handle_received(raw_packet_data: &[u8]) { // , ws: &mut WindSensor
-    match Packet::decode(raw_packet_data) {
+pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in to make calls 
+    match Packet::decode(raw_frame_data) {
         Ok(pkt) => {
             // Log received packet info
             info!(
@@ -342,11 +333,33 @@ pub fn handle_received(raw_packet_data: &[u8]) { // , ws: &mut WindSensor
                 PayloadType::Ack => {
                     info!("Recieved Ack packet; packet ignored.");
                 }
-                PayloadType::GroupText => {
-                    info!("Recieved GroupText packet; packet ignored.");
-                    // Feed into decryption func then process
-                    // todo!()
+                PayloadType::GroupText => match network::GroupTextEnvelope::decode(pkt.payload) {
+                    Ok(env) if env.channel_hash == network::channel_hash(&network::PUBLIC_CHANNEL_KEY) => {
+                        let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+                        match network::mac_then_decrypt(&network::PUBLIC_CHANNEL_KEY, env.mac, env.ciphertext, &mut plaintext) {
+                            Ok(()) => match network::RequestKey::parse(&plaintext) {
+                                Some(network::RequestKey::DataAll) => {
+                                    info!("GRP_TXT DATA request recognised — building response");
+                                    // ONLY FOR TESTING
+                                    let wss_data: i16 = 1;
+                                    let wds_data: u16 = 2;
+                                    let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
+                                    let sms_data: i16 = 4;
+                                    let tbs_data: f32 = 5.0;
+                                    // NEED TO REPLACE WITH POLLED DATA
+                                    if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+                                        warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
+                                    }
+                                }
+                                None => info!("GRP_TXT message not a recognised command; ignored"),
+                            },
+                            Err(e) => warn!("GRP_TXT MAC/decrypt failed: {:?}", defmt::Debug2Format(&e)),
+                        }
+                    }
+                    Ok(env) => info!("GRP_TXT on unknown channel (hash={}); ignored", env.channel_hash),
+                    Err(e) => warn!("failed to parse GroupText envelope: {:?}", defmt::Debug2Format(&e)),
                 }
+                
                 PayloadType::GroupData => {
                     info!("Recieved GroupData packet; packet ignored.");
                 }
@@ -437,6 +450,7 @@ pub fn handle_received(raw_packet_data: &[u8]) { // , ws: &mut WindSensor
                 }
             }
         }
-        Err(e) => warn!("failed to parse packet in handle_received: {:?}", defmt::Debug2Format(&e)),
+        Err(e) => warn!("failed to parse packet in frame_handler: {:?}", defmt::Debug2Format(&e)),
     }
 }
+

@@ -18,6 +18,9 @@ pub enum SensorError {
 
 pub const SOIL_MOISTURE_CHANNEL: usize = 0; //Confirm ADC wiring
 pub const WIND_SPEED_CHANNEL: usize = 1; //Confirm ADC wiring
+// pub const SOIL_LOWER_BOUND: f32 = 0f32; //Place value here after sensor is calibrated
+// pub const SOIL_UPPER_BOUND: f32 = 100f32; //Place value here after sensor is calibrated
+// pub const SOIL_RANGE: f32 = SOIL_UPPER_BOUND - SOIL_LOWER_BOUND;
 
 impl AdcSensors {
     pub fn new(saadc: Saadc<'static, 2>, // confirm actual RAK4631 mapping
@@ -25,10 +28,12 @@ impl AdcSensors {
         Self { saadc }
     }
 
-    pub async fn get_soil_moisture(adc: &mut Saadc<'static, 2>) -> i16 {
+    pub async fn get_soil_moisture(&mut self) -> f32 {
         let mut buf = [0i16; 2];
-        adc.sample(&mut buf).await;
-        buf[SOIL_MOISTURE_CHANNEL]
+        self.saadc.sample(&mut buf).await;
+        let raw = buf[SOIL_MOISTURE_CHANNEL];
+        raw as f32
+        //(raw as f32 - SOIL_LOWER_BOUND) / SOIL_RANGE
     }
 
     pub async fn get_wind_speed(&mut self) -> i16 {

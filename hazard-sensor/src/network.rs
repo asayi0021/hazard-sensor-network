@@ -6,7 +6,13 @@ use sha2::{Digest, Sha256};
 use aes::Aes128;
 use aes::cipher::{BlockCipherEncrypt, BlockCipherDecrypt, Array, KeyInit};
 use hmac::{Hmac, Mac};
-use crate::MESHCORE_TX_BUFF;
+use embassy_time::Instant;
+use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
+
+// Imported objects from main
+use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET};
+
+//----MeshCore and LoRa related constants---------------------------------------
 
 /// Packet parameters
 pub const MAX_PACKET_LEN: usize = 255;
@@ -38,6 +44,8 @@ pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need 
 /// everything." Extend with more variants in further iterations
 pub const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
 pub const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1; 
+
+//----MeshCore related enums and implemented functions--------------------------
 
 /// Header - Route type (bits 0-1)
 #[derive(Debug, Clone, Copy)]
@@ -112,9 +120,6 @@ impl PayloadType {
 /// Node paramters - Node ID 
 pub type NodeIdHash = u8; // u32 for larger hash sizes? 
 // only first byte of Ed2556 key is used
-//
-
-
 
 /// Node ID hash size in bytes
 #[derive(Debug, Clone, Copy)]
@@ -163,6 +168,8 @@ pub enum DecodeError {
     MacMismatch
 }
 
+// Used for matching keywords to process different request types.
+// Currently only implemented request type is to send all data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RequestKey {
     DataAll,    // Data from full sensor suite 
@@ -174,6 +181,7 @@ pub enum RequestKey {
     // Tbs, // = "TBS"     // Tipping bucket sensor 
 }
 
+// Match string format of keywords returning RequestKey type.
 impl RequestKey {
     const DATA_ALL_KEYWORD: &'static str = "DATA";
     // Below keys are for extending request functionality to sensor specific requests.
@@ -349,6 +357,8 @@ impl<'a> Packet<'a> {
     }
 }
 
+//----Transceiver level (frame) functions that implement MeshCore---------------
+
 /// Called for periodic sensor-data broadcast via RawCustom, for public channel
 /// broadcast see: send_group_text_sensor_data
 pub fn send_sensor_broadcast(
@@ -398,9 +408,16 @@ pub fn send_group_text_sensor_data(
     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json)
         .map_err(|_| EncodeError::PayloadTooLong)?;
 
-    let timestamp: u32 = 0; // TODO: real timestamp once a time source exists
+        // TESTING ALTERNATE FORMAT THAT INCLUDES A BYTE FOR FLAGS
+    // let timestamp: u32 = get_current_timestamp(); 
+    // let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+    // plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+    // plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+
+    let timestamp: u32 = get_current_timestamp();
     let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
     plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+    plaintext.push(0x00).map_err(|_| EncodeError::PayloadTooLong)?; // flags/txt_type byte
     plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
 
     let mut ciphertext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
@@ -422,8 +439,32 @@ pub fn send_group_text_sensor_data(
 
     if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
         warn!("tx queue full, dropping GRP_TXT sensor data");
+        // return Err(EncodeError::PayloadTooLong);
     }
     Ok(())
+}
+
+/// Current timestamp for use in outgoing packet plaintexts.
+pub fn get_current_timestamp() -> u32 {
+    let elapsed_secs = Instant::now().as_secs() as i32;
+    let offset = CLOCK_OFFSET.load(Ordering::Relaxed);
+    (elapsed_secs + offset) as u32
+}
+
+/// Adjust the clock offset using a timestamp extracted from a received
+/// packet (e.g. a request from the phone app, which has real wall-clock
+/// time). Only ever moves the clock forward, never backward — a stale or
+/// out-of-order packet shouldn't be able to rewind us, since MeshCore
+/// timestamps are meant to increase monotonically for dedup/freshness.
+pub fn sync_clock_from_received(received_timestamp: u32) {
+    let elapsed_secs = Instant::now().as_secs() as i32;
+    let candidate_offset = received_timestamp as i32 - elapsed_secs;
+    let current_offset = CLOCK_OFFSET.load(Ordering::Relaxed);
+    if candidate_offset > current_offset {
+        CLOCK_OFFSET.store(candidate_offset, Ordering::Relaxed);
+        CLOCK_SYNCED.store(true, Ordering::Relaxed);
+        info!("clock synced from received packet, new offset = {}", candidate_offset);
+    }
 }
 
 //----All HMAC/AES payload encrypting down--------------------------------------

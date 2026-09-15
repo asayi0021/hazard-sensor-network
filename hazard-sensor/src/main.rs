@@ -9,17 +9,20 @@ mod network;
 mod network_testing;
 
 // use cortex_m::delay::Delay; // Caused delay import overlap, not used in network firmware
+use embassy_futures::select::{select, Either};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_nrf::gpio::{Level, Output, OutputDrive, Input, Pull};
 use sensors::wind_sensor;
-use defmt::{info, warn};
+use defmt::{info, warn, error};
 use embassy_executor::Spawner;
 use embassy_nrf::*;
-use embassy_time::{Delay, Duration, Timer};
+use embassy_time::{Delay, Duration, Timer, Instant};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use static_cell::ConstStaticCell;
+use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
+
 
 use lora_phy::sx126x::{self, Sx1262, Sx126x, TcxoCtrlVoltage};
 use lora_phy::{DelayNs, LoRa, iv, RxMode}; 
@@ -37,7 +40,7 @@ static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 // Initialise recieved packet buffer - currently of size 4 
 // static MESHCORE_RX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
 
-// Initialise tx packet buffer
+// Initialise tx packet buffer                                                    
 pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
 // NoopRawMutex has sync error from use in main (async) and radio_task (async)
 // static MESHCORE_TX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
@@ -48,6 +51,15 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 //CriticalSelectionRawMutex maybe more appropriate depedning on async/
 // interrupt implementation, as far as I can tell embassy_executor will 
 // only access it from a single task it spawns at a time.
+
+/// Local clock, expressed as an offset applied to time-since-boot.
+///   current_timestamp = seconds_since_boot + CLOCK_OFFSET
+/// Starts at approx 12pm 15/09/26, meaning "current_timestamp" is just 
+/// that date plus the seconds-since-boot until synchronized — which 
+/// already guarantees every call returns a distinct, increasing value but may 
+/// fall outside the acceptable time window.
+pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
+pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);    
 
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
@@ -228,23 +240,26 @@ async fn main(_spawner: Spawner) {
     // }
 
     // --- ROLE: sensor node broadcaster --- 
-    loop {
-        Timer::after(Duration::from_secs(15)).await;
+    // loop {
+    //     Timer::after(Duration::from_secs(15)).await;
 
-        // --- Raw custom broadcast testing block --- 
-        // if let Err(e) = network::send_sensor_broadcast(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
-        //     warn!("failed to send sensor broadcast: {:?}", defmt::Debug2Format(&e));
-        // }
+    //     // --- Raw custom broadcast testing block --- 
+    //     // if let Err(e) = network::send_sensor_broadcast(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+    //     //     warn!("failed to send sensor broadcast: {:?}", defmt::Debug2Format(&e));
+    //     // }
 
-        // --- Public-channel broadcast testing block --- 
-        if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
-            warn!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
-        } else {
-            info!("public channel broadcast sent");
-        }
-    }
+    //     // --- Public-channel broadcast testing block --- 
+    //     if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+    //         error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
+    //     } else {
+    //         info!("public channel broadcast sent");
+    //     }
+    // }
 
 }
+
+
+//----MeshCore network related firmware down------------------------------------
 
 /// radio_task drains the MESHCORE_TX_BUFF when it is not empty, and calls 
 /// frame_handler when anything is recieved by the transceiver. 
@@ -252,36 +267,59 @@ async fn main(_spawner: Spawner) {
 async fn radio_task(
     mut radio: SX1262,
 ){
-
-    // Initialise rx pkt parameters - non-default 
-    // if received_pkt.PacketParams != radio.rx_pkt_params {
-    // let rx_pkt_params_non_std: PacketParams = radio.lora_radio.create_rx_pkt_params(...).expect();
-    // }
-    
-
     // Initialise recieved packet buffer locally - possible issue 
     let mut meshcore_rx_buf = [0u8; MAX_PACKET_LEN];
 
-    loop{
-        while let Ok(frame) = MESHCORE_TX_BUFF.try_receive() {
-            send_frame(&mut radio, &frame).await;
-        }
-
+    loop {
         radio.lora_radio.prepare_for_rx(RxMode::Continuous, &radio.mod_params, &radio.rx_pkt_params)
             .await
             .expect("Prepare for rx (continuous mode) failed");
 
-        match radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf).await {
-            Ok((len,status)) => {
+        // Using Either purposefully sets a race condition. Whichever function call 
+        // returns result first is taken. If a packet arrives for RX to process
+        // while a TX is being sent out the recieved packet will be dropped.
+        // This currently poses no issues as the only incoming packets of note 
+        // are requests and all the broadcasts send out the same data as a 
+        // response. However this should be investigated as a possible breakpoint. 
+        match select(
+            radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf),
+            MESHCORE_TX_BUFF.receive(),
+        ).await {
+            Either::First(Ok((len, status))) => {
                 let data = &meshcore_rx_buf[..len as usize];
                 info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
                 frame_handler(data);
             }
-            Err(e) => {
+            Either::First(Err(e)) => {
                 warn!("radio rx error {:?}", defmt::Debug2Format(&e));
+            }
+            Either::Second(frame) => {
+                send_frame(&mut radio, &frame).await;
             }
         }
     }
+    // PREVIOUS NONE RACE CONDITION IMPLEMENTATION WHERE TX GOT BLOCKED
+    // loop{
+    //     while let Ok(frame) = MESHCORE_TX_BUFF.try_receive() {
+    //         info!("send_frame reached");
+    //         send_frame(&mut radio, &frame).await;
+    //     }
+
+    //     radio.lora_radio.prepare_for_rx(RxMode::Continuous, &radio.mod_params, &radio.rx_pkt_params)
+    //         .await
+    //         .expect("Prepare for rx (continuous mode) failed");
+
+    //     match radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf).await {
+    //         Ok((len,status)) => {
+    //             let data = &meshcore_rx_buf[..len as usize];
+    //             info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
+    //             frame_handler(data);
+    //         }
+    //         Err(e) => {
+    //             warn!("radio rx error {:?}", defmt::Debug2Format(&e));
+    //         }
+    //     }
+    // }
 }
 
 /// Send a frame - MeshCore packet inside LoRa frame - may move to network.rs for clarity
@@ -303,7 +341,7 @@ async fn send_frame(
     }
 }
 
-/// Process incoming packet data
+/// Process incoming frame data, react according to packet content.
 pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in to make calls 
     match Packet::decode(raw_frame_data) {
         Ok(pkt) => {
@@ -315,6 +353,7 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
                 pkt.path.len(),
                 pkt.payload.len(),
             );
+            info!("raw payload bytes: {:02x}", pkt.payload); // defmt can format &[u8] as hex directly
             // Determine action based on rx payload type 
             match pkt.payload_type {
                 PayloadType::Request => {
@@ -337,22 +376,28 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
                     Ok(env) if env.channel_hash == network::channel_hash(&network::PUBLIC_CHANNEL_KEY) => {
                         let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
                         match network::mac_then_decrypt(&network::PUBLIC_CHANNEL_KEY, env.mac, env.ciphertext, &mut plaintext) {
-                            Ok(()) => match network::RequestKey::parse(&plaintext) {
-                                Some(network::RequestKey::DataAll) => {
-                                    info!("GRP_TXT DATA request recognised — building response");
-                                    // ONLY FOR TESTING
-                                    let wss_data: i16 = 1;
-                                    let wds_data: u16 = 2;
-                                    let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
-                                    let sms_data: i16 = 4;
-                                    let tbs_data: f32 = 5.0;
-                                    // NEED TO REPLACE WITH POLLED DATA
-                                    if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
-                                        warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
-                                    }
+                            Ok(()) => {
+                                if plaintext.len() >= 4 {
+                                    let received_ts = u32::from_le_bytes([plaintext[0], plaintext[1], plaintext[2], plaintext[3]]);
+                                    network::sync_clock_from_received(received_ts);
                                 }
-                                None => info!("GRP_TXT message not a recognised command; ignored"),
-                            },
+                                match network::RequestKey::parse(&plaintext) {
+                                    Some(network::RequestKey::DataAll) => {
+                                        info!("GRP_TXT DATA request recognised — building response");
+                                        // ONLY FOR TESTING
+                                        let wss_data: i16 = 1;
+                                        let wds_data: u16 = 2;
+                                        let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
+                                        let sms_data: i16 = 4;
+                                        let tbs_data: f32 = 5.0;
+                                        // NEED TO REPLACE WITH POLLED DATA
+                                        if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+                                            warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
+                                        }
+                                    }
+                                    None => info!("GRP_TXT message not a recognised command; ignored"),
+                        }
+                    }
                             Err(e) => warn!("GRP_TXT MAC/decrypt failed: {:?}", defmt::Debug2Format(&e)),
                         }
                     }

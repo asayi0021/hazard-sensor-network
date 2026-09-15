@@ -100,18 +100,17 @@ impl From<uarte::Error> for SensorError {
 
 impl TippingBucket {
     // Initialising the uarte connection for the tipping bucket sensor
-    pub fn init_tipping_bucket_uarte(
-        uarte1: Peri<'static, peripherals::UARTE1>,
-        rx_pin: Peri<'static, peripherals::P0_13>, //Double check that this pin is correct
-        tx_pin: Peri<'static, peripherals::P0_14>, //Double check that this pin is correct
-    ) -> Uarte<'static> {
-        let mut config = Config::default();
-        config.parity = Parity::Excluded; //Based on what found in the given library for the sensor
-        config.baudrate = Baudrate::Baud9600; //Based on what found in the given library for the sensor
-        let uart = Uarte::new(uarte1, rx_pin, tx_pin, Irqs, config);
-        debug!("tipping bucket initialised succesfully");
-        uart
-    }
+    // pub fn init_tipping_bucket_uarte(
+    //     uarte1: Peri<'static>,
+    //     rx_pin: Peri<'static>,
+    //     tx_pin: Peri<'static>,
+    // ) -> Uarte<'static> {
+    //     let mut config = Config::default();
+    //     config.parity = Parity::Excluded; //Based on what found in the given library for the sensor
+    //     config.baudrate = Baudrate::Baud9600; //Based on what found in the given library for the sensor
+    //     let uart = Uarte::new(uarte1, rx_pin, tx_pin, Irqs, config);
+    //     uart
+    // }
 
     // Initialising the modbus connection for the tipping bucket sensor
     pub async fn init_tipping_bucket_modbus(
@@ -119,6 +118,7 @@ impl TippingBucket {
     ) -> Result<(u32, u32), SensorError> {
         let regs =
             read_inputs::<2, _>(adapter, SLAVE_ADDR, InputRegister::InputRegPID as u16).await?;
+        debug!("here!");
 
         let reg0 = regs[0].get() as u32; // PID low word
         let reg1 = regs[1].get() as u32; // VID + PID high bits, packed
@@ -129,23 +129,27 @@ impl TippingBucket {
         Ok((pid, vid))
     }
     // Initialising the tipping bucket sensor - higher level
-    pub async fn new(
-        uarte1: Peri<'static, peripherals::UARTE1>,
-        rx_pin: Peri<'static, peripherals::P0_13>, //Double check that this pin is correct
-        tx_pin: Peri<'static, peripherals::P0_14>, //Double check that this pin is correct
-    ) -> Result<Self, SensorError> {
-        let mut uart = Self::init_tipping_bucket_uarte(uarte1, rx_pin, tx_pin);
-        let mut adapter = UarteAdapter(uart);
-
+    pub async fn new(uarte1: Uarte<'static>) -> Result<Self, SensorError> {
+        // let uart = Self::init_tipping_bucket_uarte(uarte1, rx_pin, tx_pin);
+        let mut adapter = UarteAdapter(uarte1);
         let (pid, vid) = Self::init_tipping_bucket_modbus(&mut adapter).await?;
 
         if pid != EXPECTED_PID || vid != EXPECTED_VID {
             //find the expected values
             return Err(SensorError::UnexpectedDevice); // check how errors should be handled
         }
-
+        debug!("tipping bucket initialised succesfully");
         Ok(Self { uart: adapter })
     }
+
+    // pub async fn new_from_uart(uart: Uarte<'static>) -> Result<Self, SensorError> {
+    //     let mut adapter = UarteAdapter(uart);
+    //     let (pid, vid) = Self::init_tipping_bucket_modbus(&mut adapter).await?;
+    //     if pid != EXPECTED_PID || vid != EXPECTED_VID {
+    //         return Err(SensorError::UnexpectedDevice);
+    //     }
+    //     Ok(Self { uart: adapter })
+    // }
 
     // Gets the tipping bucket value from the sensor - specifially from the set time cumulative rainfall registers
     // Potentially add a flag for div by 10000.0 But need to decide later.

@@ -2,7 +2,7 @@
 #![no_main]
 
 use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
-use crate::network::{BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, MAX_PAYLOAD_LEN, PUBLIC_CHANNEL_KEY, Packet, PayloadType, RouteType, SPREADING_FACTOR, TX_POWER_DBM};
+use crate::network::{Advert, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, MAX_PAYLOAD_LEN, PUBLIC_CHANNEL_KEY, Packet, PayloadType, RouteType, SensorReadings, SPREADING_FACTOR, TX_POWER_DBM};
 
 mod sensors;
 mod network;
@@ -20,8 +20,10 @@ use embassy_nrf::*;
 use embassy_time::{Delay, Duration, Timer, Instant};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
+use embassy_sync::blocking_mutex::Mutex;
 use static_cell::ConstStaticCell;
 use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
+use core::cell::RefCell;
 
 
 use lora_phy::sx126x::{self, Sx1262, Sx126x, TcxoCtrlVoltage};
@@ -36,9 +38,9 @@ bind_interrupts!(struct Irqs {
 // i2c tx buffer
 static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
-
-// Initialise recieved packet buffer - currently of size 4 
-// static MESHCORE_RX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
+// sensor data holding 
+static LATEST_READINGS: Mutex<CriticalSectionRawMutex, RefCell<SensorReadings>> =
+    Mutex::new(RefCell::new(SensorReadings::empty()));
 
 // Initialise tx packet buffer                                                    
 pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
@@ -83,6 +85,7 @@ impl NRF52840 {
     }
 }
 
+/// Object for initalising the Sx1262 transceiver and it's assigned parameters.
 pub struct SX1262 {
     lora_radio: LoRa<Sx126x<ExclusiveDevice<spim::Spim<'static>, gpio::Output<'static>, embassy_time::Delay>,
             iv::GenericSx126xInterfaceVariant<gpio::Output<'static>, gpio::Input<'static>>,
@@ -244,12 +247,12 @@ async fn main(_spawner: Spawner) {
     //     Timer::after(Duration::from_secs(15)).await;
 
     //     // --- Raw custom broadcast testing block --- 
-    //     // if let Err(e) = network::send_sensor_broadcast(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+    //     // if let Err(e) = network::send_sensor_broadcast() {
     //     //     warn!("failed to send sensor broadcast: {:?}", defmt::Debug2Format(&e));
     //     // }
 
     //     // --- Public-channel broadcast testing block --- 
-    //     if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+    //     if let Err(e) = network::send_group_text_sensor_data() {
     //         error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
     //     } else {
     //         info!("public channel broadcast sent");
@@ -298,28 +301,6 @@ async fn radio_task(
             }
         }
     }
-    // PREVIOUS NONE RACE CONDITION IMPLEMENTATION WHERE TX GOT BLOCKED
-    // loop{
-    //     while let Ok(frame) = MESHCORE_TX_BUFF.try_receive() {
-    //         info!("send_frame reached");
-    //         send_frame(&mut radio, &frame).await;
-    //     }
-
-    //     radio.lora_radio.prepare_for_rx(RxMode::Continuous, &radio.mod_params, &radio.rx_pkt_params)
-    //         .await
-    //         .expect("Prepare for rx (continuous mode) failed");
-
-    //     match radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf).await {
-    //         Ok((len,status)) => {
-    //             let data = &meshcore_rx_buf[..len as usize];
-    //             info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
-    //             frame_handler(data);
-    //         }
-    //         Err(e) => {
-    //             warn!("radio rx error {:?}", defmt::Debug2Format(&e));
-    //         }
-    //     }
-    // }
 }
 
 /// Send a frame - MeshCore packet inside LoRa frame - may move to network.rs for clarity
@@ -372,6 +353,18 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
                 PayloadType::Ack => {
                     info!("Recieved Ack packet; packet ignored.");
                 }
+                // The clock update based on adverts could potentially be abused
+                // by malicious advert packets being injected into the network.
+                // It is therefore a security risk, but a low one. 
+                PayloadType::Advert => match network::Advert::decode(pkt.payload){
+                    Ok(adv) => {
+                        network::sync_clock_from_received(adv.timestamp);
+                        info!("Advert received from node with public key: {:?}, advert info dropped.", adv.public_key);
+                    }
+                    Err(e) => {
+                        error!("Advert decode failed: {:?} - timestamp not updated.", defmt::Debug2Format(&e))
+                    }
+                }
                 PayloadType::GroupText => match network::GroupTextEnvelope::decode(pkt.payload) {
                     Ok(env) if env.channel_hash == network::channel_hash(&network::PUBLIC_CHANNEL_KEY) => {
                         let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
@@ -384,20 +377,43 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
                                 match network::RequestKey::parse(&plaintext) {
                                     Some(network::RequestKey::DataAll) => {
                                         info!("GRP_TXT DATA request recognised — building response");
-                                        // ONLY FOR TESTING
-                                        let wss_data: i16 = 1;
-                                        let wds_data: u16 = 2;
-                                        let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
-                                        let sms_data: i16 = 4;
-                                        let tbs_data: f32 = 5.0;
-                                        // NEED TO REPLACE WITH POLLED DATA
-                                        if let Err(e) = network::send_group_text_sensor_data(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
+                                        if let Err(e) = network::send_group_text_sensor_data() {
                                             warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
                                         }
                                     }
+                                    // Some(network::RequestKey::Wss) => { Reformatted to neater 
+                                    //     info!("GRP_TXT WSS request recognised — building response");
+                                    //     let wss_data: i16 = 1;
+                                        
+                                    // }
+                                    // Some(network::RequestKey::Wds) => {
+                                    //     info!("GRP_TXT WDS request recognised — building response");
+                                    //     let wds_data: u16 = 2;
+                                
+                                    // }
+                                    // Some(network::RequestKey::Aqs) => {
+                                    //     info!("GRP_TXT AQS request recognised — building response");
+                                    //     let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
+                                    
+                                    // }
+                                    // Some(network::RequestKey::Sms) => {
+                                    //     info!("GRP_TXT SMS request recognised — building response");
+                                    //     let sms_data: i16 = 4;
+
+                                    // }
+                                    // Some(network::RequestKey::Tbs) => {
+                                    //     info!("GRP_TXT TBS request recognised — building response");
+                                    //     let tbs_data: f32 = 5.0;
+                                    // }
+                                    Some(key) => { // key should be network::RequestKey ?
+                                        info!("GRP_TXT single-sensor request recognised: {:?}", defmt::Debug2Format(&key));
+                                        if let Err(e) = network::send_group_text_single_sensor(key) {
+                                            warn!("failed to send GRP_TXT single-sensor response: {:?}", defmt::Debug2Format(&e));
+                                        }
+                                    }
                                     None => info!("GRP_TXT message not a recognised command; ignored"),
-                        }
-                    }
+                                    }
+                            }
                             Err(e) => warn!("GRP_TXT MAC/decrypt failed: {:?}", defmt::Debug2Format(&e)),
                         }
                     }
@@ -424,61 +440,16 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
                     info!("Recieved Control packet; packet ignored.");
                     // Possibly used with MQTT MeshCore extension for node health checks 
                 }
-                // Currently the key packet type, used to handle requests, responses, and timed broadcasts
+                // Currently unused packet type.
                 PayloadType::RawCustom => {
                     info!("Recieved RawCustom packet; packet ignored.");
-                    // Look at first byte of received packet payload
                     match pkt.payload.split_first() {
-                        // Match against designated request tag byte
                         Some((&network::RAW_CUSTOM_REQUEST_TAG, _rest)) => {
-                            info!("received request for all sensor data — reading live");
-
-                            // DUMMY DATA FOR RESPONSE - ONLY FOR TESTING
-                            let wss_data = 1;
-                            let wds_data: u16 = 2;
-                            let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
-                            let sms_data: i16 = 4;
-                            let tbs_data: f32 = 5.0;
-
-                            // Attempt encoding payload using sensor data
-                            match Packet::encode_payload(&wss_data, &wds_data, &aqs_data, &sms_data, &tbs_data) {
-                                // ONLY FOR RAW CUSTOM RESPONSE - Prepend JSON formatted payload with designated response byte
-                                Ok(json) => match network::build_sensor_data_frame(&json) {
-                                    Ok(response_payload) => {
-                                        // Copy received packet path then reverse it to obtain response path
-                                        let mut return_path = pkt.path.clone();
-                                        return_path.reverse();
-
-                                        // Fully form MeshCore (raw custom) response packet 
-                                        let response = Packet {
-                                            payload_version: 0,
-                                            route_type: RouteType::Direct,
-                                            payload_type: PayloadType::RawCustom,
-                                            transport_code: None,
-                                            path: return_path,
-                                            payload: &response_payload,
-                                        };
-
-                                        // Encode MeshCore packet into bytes for LoRa transmission
-                                        let mut buf = [0u8; MAX_PACKET_LEN];
-                                        match response.encode(&mut buf) {
-                                            Ok(len) => {
-                                                let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
-                                                if frame.extend_from_slice(&buf[..len]).is_ok() {
-                                                    if MESHCORE_TX_BUFF.try_send(frame).is_err() {
-                                                        warn!("tx queue full, dropping response");
-                                                    }
-                                                }
-                                            }
-                                            Err(e) => warn!("failed to encode response packet: {:?}", defmt::Debug2Format(&e)),
-                                        }
-                                    }
-                                    Err(e) => warn!("failed to build response frame: {:?}", defmt::Debug2Format(&e)),
-                                },
-                                Err(e) => warn!("failed to encode sensor payload: {:?}", defmt::Debug2Format(&e)),
+                            info!("received request for all sensor data");
+                            if let Err(e) = network::send_sensor_broadcast() {
+                                warn!("failed to send RawCustom sensor data: {:?}", defmt::Debug2Format(&e));
                             }
                         }
-                        // CODE FOR HANDLING RECIEVED RAW_CUSTOM DATA PACKET - ONLY FOR TESTING
                         Some((&network::RAW_CUSTOM_RESPONSE_TAG, rest)) => {
                             if let Ok(json_str) = core::str::from_utf8(rest) {
                                 info!("received sensor JSON: {}", json_str);
@@ -499,3 +470,13 @@ pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in
     }
 }
 
+pub fn get_latest_readings() -> SensorReadings {
+    LATEST_READINGS.lock(|cell| *cell.borrow())
+}
+
+/// Called by whatever eventually does real sensor polling — a periodic
+/// task calling this, or calling it before get_latest_sensor_readings
+/// is the only sensor integration point needed.
+pub fn update_readings(new: SensorReadings) {
+    LATEST_READINGS.lock(|cell| *cell.borrow_mut() = new);
+}

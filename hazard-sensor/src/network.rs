@@ -8,9 +8,14 @@ use aes::cipher::{BlockCipherEncrypt, BlockCipherDecrypt, Array, KeyInit};
 use hmac::{Hmac, Mac};
 use embassy_time::Instant;
 use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
+use core::cell::RefCell;
+use embassy_sync::blocking_mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 
-// Imported objects from main
-use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET};
+
+
+// Imported objects/functions from main
+use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET, LATEST_READINGS, get_latest_readings, update_readings};
 
 //----MeshCore and LoRa related constants---------------------------------------
 
@@ -19,18 +24,21 @@ pub const MAX_PACKET_LEN: usize = 255;
 pub const MAX_PATH_LEN: usize = 64;
 pub const MAX_PAYLOAD_LEN: usize = 184;
 // JSON formatting parameter
-pub const MAX_JSON_LEN: usize = 128;
+pub const MAX_JSON_LEN: usize = 128; // can be upped to MAX_PAYLOAD_LENGTH if need be 
 // Public channel key
 pub const PUBLIC_CHANNEL_KEY: [u8; 16] = [
     0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a,
     0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72,
 ];
+// Node ID - constant for prototype, derived from Ed25519 key in standard 
+// MeshCore implementation. The real MeshCore ID is feasible to get but it 
+// depends on hosts requirements of ID logging to see if its worth doing.
+pub const NODE_ID: NodeIdHash = 0x42; // 66 in decimal format
+
 // HMAC/AES encryption constants/type
 const BLOCK_SIZE: usize = 16;
 const MAC_LEN: usize = 2;
 type HmacSha256 = Hmac<Sha256>;
-// Node ID - constant for prototype, derived from Ed25519 key in standard MeshCore implementation
-pub const NODE_ID: NodeIdHash = 0x42; // 66 in decimal format
 
 /// Modulation parameters
 pub const TX_POWER_DBM: i32 = 22; // Assumes the antenna will have 8dBi gain.
@@ -46,6 +54,25 @@ pub const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
 pub const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1; 
 
 //----MeshCore related enums and implemented functions--------------------------
+
+/// Errors types for encoding packets and payloads
+#[derive(Debug)]
+pub enum EncodeError {
+    PathTooLong,
+    PayloadTooLong,
+}
+
+/// Errors when parsing a received frame/payload back into a packet/payload
+#[derive(Debug)]
+pub enum DecodeError {
+    TooShort,
+    UnknownRouteType,
+    UnknownPayloadType,
+    ReservedHashSize,
+    PathTooLong,
+    PayloadTooLong,
+    MacMismatch
+}
 
 /// Header - Route type (bits 0-1)
 #[derive(Debug, Clone, Copy)]
@@ -149,63 +176,64 @@ impl HashSize {
     }
 }
 
-/// Errors types for encoding packets and payloads
-#[derive(Debug)]
-pub enum EncodeError {
-    PathTooLong,
-    PayloadTooLong,
-}
-
-/// Errors when parsing a received frame/payload back into a packet/payload
-#[derive(Debug)]
-pub enum DecodeError {
-    TooShort,
-    UnknownRouteType,
-    UnknownPayloadType,
-    ReservedHashSize,
-    PathTooLong,
-    PayloadTooLong,
-    MacMismatch
-}
-
 // Used for matching keywords to process different request types.
 // Currently only implemented request type is to send all data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RequestKey {
     DataAll,    // Data from full sensor suite 
     // Below keys are for extending request functionality to sensor specific requests.
-    // Wss, // = "WSS"     // Wind speed sensor
-    // Wds, // = "WDS"     // Wind direction sensor
-    // Aqs, // = "AQS"     // Air quality sensor 
-    // Sms, // = "SMS"     // Soil moisture sensor 
-    // Tbs, // = "TBS"     // Tipping bucket sensor 
+    Wss, // = "WSS"     // Wind speed sensor
+    Wds, // = "WDS"     // Wind direction sensor
+    Aqs, // = "AQS"     // Air quality sensor 
+    Sms, // = "SMS"     // Soil moisture sensor 
+    Tbs, // = "TBS"     // Tipping bucket sensor 
 }
 
 // Match string format of keywords returning RequestKey type.
 impl RequestKey {
     const DATA_ALL_KEYWORD: &'static str = "DATA";
     // Below keys are for extending request functionality to sensor specific requests.
-    // const WSS_KEYWORD: &'static str = "WSS";
-    // const WDS_KEYWORD: &'static str = "WDS";
-    // const AQS_KEYWORD: &'static str = "AQS";
-    // const SMS_KEYWORD: &'static str = "SMS";
-    // const TBS_KEYWORD: &'static str = "TBS";
+    const WSS_KEYWORD: &'static str = "WSS";
+    const WDS_KEYWORD: &'static str = "WDS";
+    const AQS_KEYWORD: &'static str = "AQS";
+    const SMS_KEYWORD: &'static str = "SMS";
+    const TBS_KEYWORD: &'static str = "TBS";
 
-    /// `plaintext` is the full decrypted GRP_TXT body: timestamp(4) + text.
-    /// We search the tail as a substring rather than requiring an exact
-    /// match, so this works regardless of whether the app prepends
-    /// "name: " or a flags byte — both real possibilities per the spec.
+    /// This node's addressing tag, e.g. "#42" for NODE_ID = 0x42. A sender
+    /// includes this alongside DATA to target this specific node — e.g.
+    /// "DATA #42" — rather than every node on the channel responding to
+    /// every DATA broadcast.
+    pub fn node_tag() -> heapless::String<8> {
+        let mut s: heapless::String<8> = heapless::String::new();
+        let _ = write!(s, "#{:02x}", NODE_ID);
+        s
+    }
+
+    /// `plaintext` is the full decrypted GRP_TXT body: timestamp(4) + text
+    /// (we search the tail as a substring rather than requiring an exact
+    /// offset, so this tolerates a flags byte either way).
     pub fn parse(plaintext: &[u8]) -> Option<Self> {
         if plaintext.len() <= 4 {
             return None;
         }
         let text = core::str::from_utf8(&plaintext[4..]).ok()?;
-        if text.contains(Self::DATA_ALL_KEYWORD) {
-            info!("DATA keyword recieved");
-            Some(Self::DataAll)
-        } else {
-            None
+        let tag = Self::node_tag();
+        if !text.contains(tag.as_str()) {
+            return None;
         }
+
+        const KEYWORDS: [(&str, RequestKey); 6] = [
+            (RequestKey::WSS_KEYWORD, RequestKey::Wss),
+            (RequestKey::WDS_KEYWORD, RequestKey::Wds),
+            (RequestKey::AQS_KEYWORD, RequestKey::Aqs),
+            (RequestKey::SMS_KEYWORD, RequestKey::Sms),
+            (RequestKey::TBS_KEYWORD, RequestKey::Tbs),
+            (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
+        ];
+
+        KEYWORDS.iter().find_map(|&(keyword, key)| {
+            text.contains(keyword).then_some(key)
+        })
     }
 }
 
@@ -285,7 +313,9 @@ impl<'a> Packet<'a> {
     /// can be accessed by anyone with a channel key. The complication here is that 
     /// to broadcast to the channel the payload must be MAC/AES encrypted using the 
     /// symmetric channel key encryption. For iteration one this is out of scope. 
-    pub fn encode_payload(
+    pub fn encode_payload( 
+        // NEED TO ADD OPTION FOR ALL INPUTS BUT THROW ERROR IF NO INPUT
+        // NEED TO HAVE DIFFERENT CASES FOR DATA ALL AS CURRENT AND SINGLE SENSOR REQ
         wss_data: &i16,                     // Wind speed sensor  
         wds_data: &u16,                     // Wind direction sensor - NEED TO VERIFT SIGNED OR UNSIGNED
         aqs_data: &(i32, u32, u32, i32),    // 4-tuple of gas sensor values
@@ -295,7 +325,7 @@ impl<'a> Packet<'a> {
         let mut payload: String<MAX_JSON_LEN> = String::new();
         write!(
             payload, 
-            "{{\"wss\":{},\"wds\":{},\"aqs\":[{},{},{},{}],\"sms\":{},\"tbs\":{}}}",
+            "{{\"wss\":{},\"wds\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
             wss_data, wds_data, aqs_data.0, aqs_data.1, aqs_data.2, aqs_data.3, sms_data, tbs_data
         )
         .map_err(|_| EncodeError::PayloadTooLong)?;
@@ -357,18 +387,56 @@ impl<'a> Packet<'a> {
     }
 }
 
+/// Advert payload type struct, used to update node clock to keep broadcast 
+/// timestamps accurate. 
+pub struct Advert<'a> {
+    pub public_key: [u8; 32],
+    pub timestamp: u32,
+    pub signature: [u8; 64],
+    pub app_data: &'a [u8],
+}
+
+impl<'a> Advert<'a> {
+    pub fn decode(buf: &'a [u8]) -> Result<Self, DecodeError> {
+        if buf.len() < 32 + 4 + 64 {
+            return Err(DecodeError::TooShort);
+        }
+        let mut public_key = [0u8; 32];
+        public_key.copy_from_slice(&buf[0..32]);
+        let timestamp = u32::from_le_bytes(buf[32..36].try_into().unwrap());
+        let mut signature = [0u8; 64];
+        signature.copy_from_slice(&buf[36..100]);
+        Ok(Self { public_key, timestamp, signature, app_data: &buf[100..] })
+    }
+}
+
+
+#[derive(Clone, Copy, Debug)]
+pub struct SensorReadings {
+    pub wss: i16,
+    pub wds: u16,
+    pub aqs: (i32, u32, u32, i32),
+    pub sms: i16,
+    pub tbs: f32,
+}
+
+impl SensorReadings {
+    pub const fn empty() -> Self {
+        Self { wss: 0, wds: 0, aqs: (0, 0, 0, 0), sms: 0, tbs: 0.0 }
+    }
+}
+impl Default for SensorReadings {
+    fn default() -> Self { Self::empty() }
+}
+
 //----Transceiver level (frame) functions that implement MeshCore---------------
 
 /// Called for periodic sensor-data broadcast via RawCustom, for public channel
 /// broadcast see: send_group_text_sensor_data
-pub fn send_sensor_broadcast(
-    wss_data: &i16,
-    wds_data: &u16,
-    aqs_data: &(i32, u32, u32, i32),
-    sms_data: &i16,
-    tbs_data: &f32,
-) -> Result<(), EncodeError> {
-    let json = Packet::encode_payload(wss_data, wds_data, aqs_data, sms_data, tbs_data)?;
+pub fn send_sensor_broadcast() -> Result<(), EncodeError> {
+    // 
+    let r = get_latest_readings();
+    let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
     let response_payload = build_sensor_data_frame(&json)?; // adds the missing tag byte
 
     let pkt = Packet::originate(RouteType::Flood, PayloadType::RawCustom, &response_payload)?;
@@ -391,34 +459,66 @@ pub fn build_sensor_data_frame(json: &str) -> Result<heapless::Vec<u8, MAX_PAYLO
     Ok(buf)
 }
 
-// Function to send data to group_text (public channel), for broadcast or response
-pub fn send_group_text_sensor_data(
-    wss_data: &i16,
-    wds_data: &u16,
-    aqs_data: &(i32, u32, u32, i32),
-    sms_data: &i16,
-    tbs_data: &f32,
-) -> Result<(), EncodeError> {
-    let json = Packet::encode_payload(wss_data, wds_data, aqs_data, sms_data, tbs_data)?;
+// DEPRECATED SEND ALL DATA FUNCTION BEFORE SINGLE SENSOR REQUEST ADDED
+// // Function to send data to group_text (public channel), for broadcast or response
+// pub fn send_group_text_sensor_data( // NEED TO ADD OPTION FOR ALL INPUTS BUT THROW ERROR IF NO INPUT
+//     wss_data: &i16,
+//     wds_data: &u16,
+//     aqs_data: &(i32, u32, u32, i32),
+//     sms_data: &i16,
+//     tbs_data: &f32,
+// ) -> Result<(), EncodeError> {
+//     let json = Packet::encode_payload(wss_data, wds_data, aqs_data, sms_data, tbs_data)?;
 
-    // "hazard-sensor-<id>: <json>" — chat-message shape so a human with the
-    // app open sees a readable reply, and NODE_ID lets multiple nodes'
-    // replies to the same broadcast be told apart.
-    let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
-    write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json)
-        .map_err(|_| EncodeError::PayloadTooLong)?;
+//     // "hazard-sensor-<id>: <json>" — chat-message shape so a human with the
+//     // app open sees a readable reply, and NODE_ID lets multiple nodes'
+//     // replies to the same broadcast be told apart.
+//     let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
+//     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json)
+//         .map_err(|_| EncodeError::PayloadTooLong)?;
 
-        // TESTING ALTERNATE FORMAT THAT INCLUDES A BYTE FOR FLAGS
-    // let timestamp: u32 = get_current_timestamp(); 
-    // let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-    // plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-    // plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+//         // TESTING ALTERNATE FORMAT THAT INCLUDES A BYTE FOR FLAGS
+//     // let timestamp: u32 = get_current_timestamp(); 
+//     // let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+//     // plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+//     // plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
 
+//     let timestamp: u32 = get_current_timestamp();
+//     let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+//     plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+//     plaintext.push(0x00).map_err(|_| EncodeError::PayloadTooLong)?; // flags/txt_type byte
+//     plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+
+//     let mut ciphertext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+//     let mac = encrypt_then_mac(&PUBLIC_CHANNEL_KEY, &plaintext, &mut ciphertext)?;
+
+//     let mut payload: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+//     GroupTextEnvelope::encode(channel_hash(&PUBLIC_CHANNEL_KEY), mac, &ciphertext, &mut payload)?;
+
+//     // Flood, not Direct — GRP_TXT is a broadcast channel message, not a
+//     // point-to-point reply, so there's no reverse path to send it down.
+//     // Text message requests would follow same structure but differ here,
+//     // needing direct RouteType.
+//     let pkt = Packet::originate(RouteType::Flood, PayloadType::GroupText, &payload)?;
+
+//     let mut buf = [0u8; MAX_PACKET_LEN];
+//     let len = pkt.encode(&mut buf)?;
+//     let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
+//     frame.extend_from_slice(&buf[..len]).map_err(|_| EncodeError::PayloadTooLong)?;
+
+//     if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
+//         warn!("tx queue full, dropping GRP_TXT sensor data");
+//         // return Err(EncodeError::PayloadTooLong);
+//     }
+//     Ok(())
+// }
+
+fn send_group_text(text: &str) -> Result<(), EncodeError> {
     let timestamp: u32 = get_current_timestamp();
     let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
     plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-    plaintext.push(0x00).map_err(|_| EncodeError::PayloadTooLong)?; // flags/txt_type byte
-    plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
+    plaintext.push(0x00).map_err(|_| EncodeError::PayloadTooLong)?;
+    plaintext.extend_from_slice(text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
 
     let mut ciphertext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
     let mac = encrypt_then_mac(&PUBLIC_CHANNEL_KEY, &plaintext, &mut ciphertext)?;
@@ -426,22 +526,43 @@ pub fn send_group_text_sensor_data(
     let mut payload: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
     GroupTextEnvelope::encode(channel_hash(&PUBLIC_CHANNEL_KEY), mac, &ciphertext, &mut payload)?;
 
-    // Flood, not Direct — GRP_TXT is a broadcast channel message, not a
-    // point-to-point reply, so there's no reverse path to send it down.
-    // Text message requests would follow same structure but differ here,
-    // needing direct RouteType.
     let pkt = Packet::originate(RouteType::Flood, PayloadType::GroupText, &payload)?;
-
     let mut buf = [0u8; MAX_PACKET_LEN];
     let len = pkt.encode(&mut buf)?;
     let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
     frame.extend_from_slice(&buf[..len]).map_err(|_| EncodeError::PayloadTooLong)?;
 
     if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
-        warn!("tx queue full, dropping GRP_TXT sensor data");
-        // return Err(EncodeError::PayloadTooLong);
+        warn!("tx queue full, dropping GRP_TXT message");
     }
     Ok(())
+}
+
+// Send all sensor data to public channel.
+pub fn send_group_text_sensor_data() -> Result<(), EncodeError> {
+    let r = get_latest_readings();
+    let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
+    let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
+    write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json).map_err(|_| EncodeError::PayloadTooLong)?;
+    send_group_text(&response_text)
+}
+
+// Send specific sensor data to public channel.
+pub fn send_group_text_single_sensor(key: RequestKey) -> Result<(), EncodeError> {
+    let r = get_latest_readings();
+    let mut json: heapless::String<64> = heapless::String::new();
+    match key {
+        RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
+        RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
+        RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
+        RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
+        RequestKey::DataAll => return send_group_text_sensor_data(),
+    }.map_err(|_| EncodeError::PayloadTooLong)?;
+
+    let mut response_text: heapless::String<96> = heapless::String::new();
+    write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json).map_err(|_| EncodeError::PayloadTooLong)?;
+    send_group_text(&response_text)
 }
 
 /// Current timestamp for use in outgoing packet plaintexts.

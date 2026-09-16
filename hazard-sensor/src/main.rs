@@ -26,6 +26,21 @@ bind_interrupts!(struct Irqs {
 
 static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
+fn modbus_crc16(data: &[u8]) -> u16 {
+    let mut crc: u16 = 0xFFFF;
+    for &byte in data {
+        crc ^= byte as u16;
+        for _ in 0..8 {
+            if crc & 1 != 0 {
+                crc = (crc >> 1) ^ 0xA001;
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+    crc
+}
+
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
     saadc: Saadc<'static, 2>,
@@ -37,7 +52,6 @@ impl NRF52840 {
         let p = embassy_nrf::init(Default::default());
         let twim_config = twim::Config::default();
         let mut uart_config = uarte::Config::default();
-        uart_config.parity = uarte::Parity::Excluded; //Based on what found in the given library for the sensor
         uart_config.baudrate = uarte::Baudrate::Baud9600; //Based on what found in the given library for the sensor
 
         let adc_config = saadc::Config::default();
@@ -72,24 +86,46 @@ async fn main(_spawner: Spawner) {
 
     info!("Hello, world!");
 
-    let tipping_bucket = TippingBucket::new(mcu.uart);
+    // let tipping_bucket = TippingBucket::new(mcu.uart);
+    let mut uart = mcu.uart;
 
-    let mut tipping_bucket = match tipping_bucket.await {
-        Ok(tb) => tb,
-        Err(e) => {
-            defmt::error!("Failed to initialise tipping bucket");
-            // decide how to handle this — panic, retry, skip the sensor, etc.
-            panic!("tipping bucket init failed");
-        }
-    };
+    let test_bytes = [0xDE, 0xAD, 0xBE, 0xEF];
 
-    info!("Hello, world! two");
     loop {
-        match tipping_bucket.get_tipping_bucket(1).await {
-            Ok(rainfall_mm) => defmt::info!("Rainfall: {} mm", rainfall_mm),
-            Err(_) => defmt::error!("Failed to read tipping bucket"),
-        }
+        defmt::info!("Sending loopback test bytes");
+        uart.write(&test_bytes).await.ok();
 
-        embassy_time::Timer::after_secs(5).await; // poll once a minute, or whatever interval fits
+        let mut buf = [0u8; 4];
+        match embassy_time::with_timeout(embassy_time::Duration::from_secs(1), uart.read(&mut buf))
+            .await
+        {
+            Ok(Ok(())) => defmt::info!("Loopback received: {:02X}", buf),
+            Ok(Err(_)) => defmt::error!("Loopback UART read error"),
+            Err(e) => defmt::error!("UART READ FAILED: {}", e),
+        }
+        embassy_time::Timer::after_secs(3).await;
     }
+
+    loop {
+        embassy_time::Timer::after_secs(60).await;
+    }
+
+    // let mut tipping_bucket = match tipping_bucket.await {
+    //     Ok(tb) => tb,
+    //     Err(e) => {
+    //         defmt::error!("Failed to initialise tipping bucket");
+    //         // decide how to handle this — panic, retry, skip the sensor, etc.
+    //         panic!("tipping bucket init failed");
+    //     }
+    // };
+
+    // info!("Hello, world! two");
+    // loop {
+    //     match tipping_bucket.get_tipping_bucket(1).await {
+    //         Ok(rainfall_mm) => defmt::info!("Rainfall: {} mm", rainfall_mm),
+    //         Err(_) => defmt::error!("Failed to read tipping bucket"),
+    //     }
+
+    //     embassy_time::Timer::after_secs(5).await; // poll once a minute, or whatever interval fits
+    // }
 }

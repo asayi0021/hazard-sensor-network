@@ -1,0 +1,1 @@
+embassy_time::timer::TimeoutFuture<impl Future<Output = Result<(), embassy_nrf::uarte::Error>>>

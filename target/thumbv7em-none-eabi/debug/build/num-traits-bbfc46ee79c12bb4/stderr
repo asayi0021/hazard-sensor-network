@@ -1,7 +1,7 @@
 error[E0463]: can't find crate for `std`
   |
   = note: the `thumbv7em-none-eabi` target may not support the standard library
-  = note: `std` is required by `autocfg_3080c329b3beb5ed_0` because it does not declare `#![no_std]`
+  = note: `std` is required by `autocfg_9cdb5152af906449_0` because it does not declare `#![no_std]`
 
 error: cannot resolve a prelude import
 

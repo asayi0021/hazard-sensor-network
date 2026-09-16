@@ -5,6 +5,7 @@ use embassy_nrf::{
     Peri, peripherals,
     uarte::{self, Baudrate, Config, Error as UarteError, Parity, Uarte},
 };
+use embassy_time::{Duration, with_timeout};
 use embedded_io_async::{Error as EioError, ErrorKind, ErrorType, Read, Write};
 //use nrf_pac::{radio::vals::State::Rx, wdt::regs::Config};
 //use nrf_pac::uarte::regs::Baudrate;
@@ -84,6 +85,7 @@ pub enum SensorError {
     UARTError(uarte::Error),
     ModbusError(async_modbus::client::Error<UartError>),
     UnexpectedDevice,
+    Timeout,
 }
 
 impl From<async_modbus::client::Error<UartError>> for SensorError {
@@ -99,7 +101,7 @@ impl From<uarte::Error> for SensorError {
 }
 
 impl TippingBucket {
-    // Initialising the uarte connection for the tipping bucket sensor
+    //Initialising the uarte connection for the tipping bucket sensor
     // pub fn init_tipping_bucket_uarte(
     //     uarte1: Peri<'static>,
     //     rx_pin: Peri<'static>,
@@ -116,8 +118,18 @@ impl TippingBucket {
     pub async fn init_tipping_bucket_modbus(
         adapter: &mut UarteAdapter<'static>,
     ) -> Result<(u32, u32), SensorError> {
-        let regs =
-            read_inputs::<2, _>(adapter, SLAVE_ADDR, InputRegister::InputRegPID as u16).await?;
+        let timeout_result = with_timeout(
+            Duration::from_secs(3),
+            read_inputs::<2, _>(adapter, SLAVE_ADDR, InputRegister::InputRegPID as u16),
+        )
+        .await;
+
+        let modbus_result = match timeout_result {
+            Ok(inner) => inner,
+            Err(_) => return Err(SensorError::Timeout),
+        };
+
+        let regs = modbus_result?;
         debug!("here!");
 
         let reg0 = regs[0].get() as u32; // PID low word

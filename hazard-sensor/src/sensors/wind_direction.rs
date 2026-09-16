@@ -7,7 +7,7 @@
 //! indicates the flange is pointed to the West, meaning the wind is blowing in
 //! fromt the East.
 
-use defmt::{Format, debug, error};
+use defmt::{Format, debug,trace, error};
 use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
 
 /// Direction Sensor.
@@ -51,19 +51,13 @@ impl<I2C: embedded_hal_async::i2c::I2c> DirectionSensor<I2C> {
     async fn write(&mut self, reg_addr: Registers, data: &[u8; 2]) -> Result<(), SensorError> {
         let reg_cp = reg_addr.clone();
 
-        self.i2c.write(self.addr, &[self.addr, reg_addr as u8]).await?;
-
-        // Build one contiguous buffer: [register address, data...].
         let mut buf = [0u8; 3];
-        buf[0] = self.addr;
-        buf[1..1 + data.len()].copy_from_slice(data);
+        buf[0] = reg_addr as u8;
+        buf[1..].copy_from_slice(data);
 
-        match self.i2c.write(
-            self.addr,
-            &buf[..1 + data.len()],
-        ).await {
+        match self.i2c.write(self.addr, &buf).await {
             Ok(_) => {
-                debug!("write to register [{:?}]: {:#010b}", reg_cp, data);
+                trace!("write to register [{:?}]: {:#010b}", reg_cp, data);
                 Ok(())
             }
             Err(e) => {
@@ -78,11 +72,11 @@ impl<I2C: embedded_hal_async::i2c::I2c> DirectionSensor<I2C> {
     async fn read(&mut self, reg_addr: Registers, buf: &mut [u8]) -> Result<(), SensorError> {
         let reg_cp = reg_addr.clone();
 
-        self.i2c.write(self.addr, &[self.addr, reg_addr as u8]).await?;
+        self.i2c.write(self.addr, &[reg_addr as u8]).await?; // just the register pointer
 
         match self.i2c.read(self.addr, buf).await {
             Ok(_) => {
-                debug!("read from register [{:?}]: {:#010b}", reg_cp, buf);
+                trace!("read from register [{:?}]: {:#010b}", reg_cp, buf);
                 Ok(())
             }
             Err(e) => {
@@ -95,14 +89,17 @@ impl<I2C: embedded_hal_async::i2c::I2c> DirectionSensor<I2C> {
 
     /// Initial configuration to set up the 16-bit ADC.
     pub async fn init_config(&mut self) -> Result<(), SensorError> {
-        self.write(Registers::Config, &[0b0000_0101, 0b1000_0011]).await?;
+        debug!("Configuring DIRECTION SENSOR...");
+        // init_config: OS=0, MUX=100, PGA=000, MODE=1 (single-shot)
+        self.write(Registers::Config, &[0b0100_0001, 0b1000_0011]).await?;
         Ok(())
     }
 
     /// Trigger a single one-shot conversion. ADC returns back to low-power mode
     /// conversion is done.
     async fn trigger_one_shot(&mut self) -> Result<(), SensorError> {
-        self.write(Registers::Config, &[0b1000_0101, 0b1000_0011]).await?;
+        // trigger_one_shot: OS=1 (trigger), MUX=100, PGA=000, MODE=1
+        self.write(Registers::Config, &[0b1100_0001, 0b1000_0011]).await?;
         Ok(())
     }
 
@@ -120,9 +117,10 @@ impl<I2C: embedded_hal_async::i2c::I2c> DirectionSensor<I2C> {
         // Clamp any unexpected negative reading to 0 rather than wrapping/underflowing.
         let raw_value = raw_value.max(0) as u32;
 
-        // Integer-only scaling: (raw / 32767) * 360, done as a single multiply-then-divide
-        // to avoid losing precision to premature integer division.
-        let degrees = (raw_value * 360) / (i16::MAX as u32);
+        // Full-scale range for PGA=000 is ±6.144V, mapped over the ADC's positive range (32768 counts).
+        // voltage_mv = raw_value * 6144 / 32768
+        // degrees   = voltage_mv * 360 / 5000
+        let degrees = (raw_value * 6144 * 360) / (32768 * 5000);
 
         Ok(degrees.min(360) as u16)
     }

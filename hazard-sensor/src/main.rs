@@ -3,6 +3,7 @@
 
 use crate::sensors::{gas_sensor::GasSensor};
 use crate::sensors::wind_direction::DirectionSensor;
+use crate::sensors::watchdog::WatchdogTimer;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -59,20 +60,20 @@ async fn main(_spawner: Spawner) {
     info!("Hello, world!");
     let mcu = NRF52840::new();
 
-    let mut gas_sensor =
-        match GasSensor::new(mcu.i2c1, GAS_SENSOR_ADDR).await {
-            Ok(sensor) => {
-                info!("GAS SENSOR initialised.");
-                sensor
-            },
-            Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
-        };
-    match gas_sensor.init_config().await {
-        Ok(_) => info!("GAS SENSOR configuration success."),
-        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
-    };
+    // let mut gas_sensor =
+    //     match GasSensor::new(mcu.i2c1, GAS_SENSOR_ADDR).await {
+    //         Ok(sensor) => {
+    //             info!("GAS SENSOR initialised.");
+    //             sensor
+    //         },
+    //         Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
+    //     };
+    // match gas_sensor.init_config().await {
+    //     Ok(_) => info!("GAS SENSOR configuration success."),
+    //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    // };
 
-    let mut direction_sensor = match DirectionSensor::new(mcu.i2c2, DIRECTION_SENSOR_ADDR).await {
+    let mut direction_sensor = match DirectionSensor::new(mcu.i2c1, DIRECTION_SENSOR_ADDR).await {
         Ok(sensor) => {
             info!("DIRECTION SENSOR initialised.");
             sensor
@@ -85,12 +86,12 @@ async fn main(_spawner: Spawner) {
     };
 
     loop {
-        let measurement = gas_sensor.get_measurements().await.unwrap();
+        // let measurement = gas_sensor.get_measurements().await.unwrap();
         // info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", measurement.0, measurement.1, measurement.2, measurement.3);
 
         let direction = direction_sensor.get_direction_reading().await.unwrap();
         info!("Direction: {} degrees", direction);
 
-        Timer::after_secs(3).await;
+        Timer::after_millis(1000).await;
     }
 }

@@ -160,7 +160,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             &buf[..1 + data.len()],
         ).await {
             Ok(_) => {
-                debug!("write to register [{:?}]: {:#010b}", reg_cp, data);
+                trace!("write to register [{:?}]: {:#010b}", reg_cp, data);
                 Ok(())
             }
             Err(e) => {
@@ -180,7 +180,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             .write_read(self.addr, &[reg_addr as u8], &mut read_buf).await
         {
             Ok(_) => {
-                debug!("read from register [{:?}]: {:#010b}", reg_cp, read_buf);
+                trace!("read from register [{:?}]: {:#010b}", reg_cp, read_buf);
                 Ok(read_buf[0])
             }
             Err(e) => {
@@ -196,7 +196,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let reg_cp = start_reg.clone();
         match self.i2c.write_read(self.addr, &[start_reg as u8], buf).await {
             Ok(_) => {
-                debug!("read from register [{:?}]: {:#010b}", reg_cp, buf);
+                trace!("read from register [{:?}]: {:#010b}", reg_cp, buf);
                 Ok(())
             }
             Err(e) => {
@@ -259,7 +259,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let par_g1 = c2[12] as i8; // 0xED
         let par_g3 = c2[13] as i8; // 0xEE
 
-        debug!(
+        trace!(
             "calibration: t1={:?} t2={:?} t3={:?} p1={:?} h1={:?} h2={:?} g1={:?} g2={:?} g3={:?}",
             par_t1, par_t2, par_t3, par_p1, par_h1, par_h2, par_g1, par_g2, par_g3
         );
@@ -333,6 +333,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     /// Initial configuration based on BME860 quick start guide.
     /// Needs to be called after `new`.
     pub async fn init_config(&mut self) -> Result<(), SensorError> {
+        debug!("Configuring GAS SENSOR...");
         // Set humidity oversampling
         let ctrl_hum = self.read(Registers::CtrlHum).await?;
         self.write(Registers::CtrlHum, &[(ctrl_hum & !0b111) | 0b001]).await?;
@@ -405,7 +406,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             | ((read_buf[1] & 0b1100_0000) as u16 >> 6);
         let gas_range = read_buf[1] & 0b0000_1111;
         let final_res = self.calc_gas_resistance(gas_adc, gas_range).await;
-        info!("Gas resistance read success: {} Ohms", final_res);
+        debug!("Gas resistance read success: {} Ohms", final_res);
         Ok(final_res)
     }
 
@@ -427,7 +428,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             | ((read_buf[1] as u32) << 4)
             | ((read_buf[2] as u32) >> 4);
         let final_temp = self.calc_temp(temp_adc).await;
-        info!("Temperature read success: {} centidegrees Celsius", final_temp[0]);
+        debug!("Temperature read success: {} centidegrees Celsius", final_temp[0]);
         Ok(final_temp)
     }
 
@@ -471,7 +472,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let hum_adc: u16 = ((read_buf[0] as u16) << 8)
             | (read_buf[1] as u16);
         let final_hum = self.calc_humidity(hum_adc, temp_comp).await;
-        info!("Humidity read success: {} milli%", final_hum);
+        debug!("Humidity read success: {} milli%", final_hum);
         Ok(final_hum)
     }
 
@@ -532,7 +533,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
             | ((read_buf[1] as u32) << 4)
             | ((read_buf[2] as u32) >> 4);
         let final_press = self.calc_pressure(press_adc, t_fine).await;
-        info!("Pressure read success: {} Pa", final_press);
+        debug!("Pressure read success: {} Pa", final_press);
         Ok(final_press)
     }
 
@@ -553,7 +554,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     ///
     /// The thresholds will need to be retuned after proper testing.
     pub async fn get_measurements(&mut self) -> Result<(f64, f64, f64, u8), SensorError> {
-        info!("Starting GAS SENSOR measurement...");
+        debug!("Starting GAS SENSOR measurement...");
         self.set_mode(GSMode::Forced).await?;
         self.check_if_ready().await?;
 
@@ -566,7 +567,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         let pressure = self.get_pressure(temp[1]).await? as f64 / 100.0;
         let gas_res = self.get_gas_resistance().await?;
 
-        info!("GAS SENSOR measurements done!");
+        debug!("GAS SENSOR measurements done!");
 
         // Convert resistance value of gas measurement to an air quality index, based
         // on the range of the resistance value. Thresholds are currently set through
@@ -582,7 +583,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
 
         info!("Temperature: {} degrees Celsius, Humidity: {} r.H%, Pressure: {} hPa, Air Quality: {}", temperature, humidity, pressure, gas_res);
 
-        info!("GAS SENSOR going to sleep...");
+        debug!("GAS SENSOR going to sleep...");
         self.set_mode(GSMode::Sleep).await?;
 
         Ok((temperature, humidity, pressure, air_quality))

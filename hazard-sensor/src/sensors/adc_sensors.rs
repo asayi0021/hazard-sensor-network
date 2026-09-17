@@ -18,7 +18,7 @@ pub enum SensorError {
 
 pub const SOIL_MOISTURE_CHANNEL: usize = 0; //Confirm ADC wiring
 pub const WIND_SPEED_CHANNEL: usize = 1; //Confirm ADC wiring
-// pub const SOIL_LOWER_BOUND: f32 = 0f32; //Place value here after sensor is calibrated
+pub const SOIL_LOWER_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
 // pub const SOIL_UPPER_BOUND: f32 = 100f32; //Place value here after sensor is calibrated
 // pub const SOIL_RANGE: f32 = SOIL_UPPER_BOUND - SOIL_LOWER_BOUND;
 

@@ -55,7 +55,7 @@ impl NRF52840 {
         uart_config.baudrate = uarte::Baudrate::Baud9600; //Based on what found in the given library for the sensor
 
         let adc_config = saadc::Config::default();
-        let channel0 = ChannelConfig::single_ended(p.P0_02); //Double check pins
+        let channel0 = ChannelConfig::single_ended(p.P0_31);
         let channel1 = ChannelConfig::single_ended(p.P0_03); //Double check pins
         let saadc = Saadc::new(p.SAADC, Irqs, adc_config, [channel0, channel1]);
 
@@ -70,7 +70,7 @@ impl NRF52840 {
         );
 
         //Initialise the UARTE driver
-        let uart = uarte::Uarte::new(p.UARTE1, p.P0_19, p.P0_20, Irqs, uart_config);
+        let uart = uarte::Uarte::new(p.UARTE1, p.P0_15, p.P0_16, Irqs, uart_config);
 
         //TippingBucket::init_tipping_bucket_uarte(p.UARTE1, p.P0_19, p.P0_20);
 
@@ -82,33 +82,39 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     let mcu = NRF52840::new();
 
-    let adc = AdcSensors::new(mcu.saadc);
+    let mut adc = AdcSensors::new(mcu.saadc);
 
     info!("Hello, world!");
 
+    let moisture = adc.get_soil_moisture().await;
+    defmt::info!("Moisture: {}", moisture);
+
+    // loop {
+    //     match adc.get_soil_moisture().await {
+    //         Ok(raw) => defmt::info!("Moisture Capacitance: {}", raw),
+    //         Err(_) => defmt::error!("Failed to read moisture sensor"),
+    //     }
+    // }
+
     // let tipping_bucket = TippingBucket::new(mcu.uart);
-    let mut uart = mcu.uart;
+    // let mut uart = mcu.uart;
 
-    let test_bytes = [0xDE, 0xAD, 0xBE, 0xEF];
+    // let test_bytes = [0xDE, 0xAD, 0xBE, 0xEF];
 
-    loop {
-        defmt::info!("Sending loopback test bytes");
-        uart.write(&test_bytes).await.ok();
+    // loop {
+    //     defmt::info!("Sending loopback test bytes");
+    //     uart.write(&test_bytes).await.ok();
 
-        let mut buf = [0u8; 4];
-        match embassy_time::with_timeout(embassy_time::Duration::from_secs(1), uart.read(&mut buf))
-            .await
-        {
-            Ok(Ok(())) => defmt::info!("Loopback received: {:02X}", buf),
-            Ok(Err(_)) => defmt::error!("Loopback UART read error"),
-            Err(e) => defmt::error!("UART READ FAILED: {}", e),
-        }
-        embassy_time::Timer::after_secs(3).await;
-    }
-
-    loop {
-        embassy_time::Timer::after_secs(60).await;
-    }
+    //     let mut buf = [0u8; 4];
+    //     match embassy_time::with_timeout(embassy_time::Duration::from_secs(1), uart.read(&mut buf))
+    //         .await
+    //     {
+    //         Ok(Ok(())) => defmt::info!("Loopback received: {:02X}", buf),
+    //         Ok(Err(_)) => defmt::error!("Loopback UART read error"),
+    //         Err(e) => defmt::error!("UART READ FAILED: {}", e),
+    //     }
+    //     embassy_time::Timer::after_secs(3).await;
+    // }
 
     // let mut tipping_bucket = match tipping_bucket.await {
     //     Ok(tb) => tb,

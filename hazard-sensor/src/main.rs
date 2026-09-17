@@ -86,8 +86,11 @@ async fn main(_spawner: Spawner) {
 
     info!("Hello, world!");
 
-    let moisture = adc.get_soil_moisture().await;
-    defmt::info!("Moisture: {}", moisture);
+    loop {
+        let moisture = adc.get_soil_moisture().await;
+        defmt::info!("Soil Moisture: {}%", moisture);
+        embassy_time::Timer::after_secs(1).await;
+    }
 
     // loop {
     //     match adc.get_soil_moisture().await {

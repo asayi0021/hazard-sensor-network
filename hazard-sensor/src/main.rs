@@ -4,6 +4,7 @@
 use crate::sensors::{gas_sensor::GasSensor};
 use crate::sensors::wind_direction::DirectionSensor;
 use crate::sensors::watchdog::WatchdogTimer;
+use crate::sensors::tipping_bucket::RainfallSensor;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -17,6 +18,8 @@ use embassy_time::Timer;
 
 /// Gas sensor I2C slave address
 const GAS_SENSOR_ADDR: u8 = 0x77;
+/// Rainfall sensor I2C slave address
+const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
 /// Direction sensor I2C slave address
 const DIRECTION_SENSOR_ADDR: u8 = 0x48;
 
@@ -73,24 +76,40 @@ async fn main(_spawner: Spawner) {
     //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
     // };
 
-    let mut direction_sensor = match DirectionSensor::new(mcu.i2c1, DIRECTION_SENSOR_ADDR).await {
-        Ok(sensor) => {
-            info!("DIRECTION SENSOR initialised.");
-            sensor
-        },
-        Err(e) => panic!("Could not intialise DIRECTION SENSOR: {:?}", e),
+    let mut rainfall_sensor =
+        match RainfallSensor::new(mcu.i2c1, RAINFALL_SENSOR_ADDR).await {
+            Ok(sensor) => {
+                info!("RAINFALL SENSOR initialised.");
+                sensor
+            },
+            Err(e) => panic!("Could not intialise RAINFALL SENSOR: {:?}", e),
+        };
+    match rainfall_sensor.init_config().await {
+        Ok(_) => info!("RAINFALL SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
     };
-    match direction_sensor.init_config().await {
-        Ok(_) => info!("DIRECTION SENSOR configuration success."),
-        Err(err) => panic!("Failed to configure DIRECTION SENSOR: {:?}", err),
-    };
+
+    // let mut direction_sensor = match DirectionSensor::new(mcu.i2c1, DIRECTION_SENSOR_ADDR).await {
+    //     Ok(sensor) => {
+    //         info!("DIRECTION SENSOR initialised.");
+    //         sensor
+    //     },
+    //     Err(e) => panic!("Could not intialise DIRECTION SENSOR: {:?}", e),
+    // };
+    // match direction_sensor.init_config().await {
+    //     Ok(_) => info!("DIRECTION SENSOR configuration success."),
+    //     Err(err) => panic!("Failed to configure DIRECTION SENSOR: {:?}", err),
+    // };
 
     loop {
         // let measurement = gas_sensor.get_measurements().await.unwrap();
         // info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", measurement.0, measurement.1, measurement.2, measurement.3);
 
-        let direction = direction_sensor.get_direction_reading().await.unwrap();
-        info!("Direction: {} degrees", direction);
+        let rainfall = rainfall_sensor.get_rainfall().await.unwrap();
+        info!("Rainfall: {} mm", rainfall);
+
+        // let direction = direction_sensor.get_direction_reading().await.unwrap();
+        // info!("Direction: {} degrees", direction);
 
         Timer::after_millis(1000).await;
     }

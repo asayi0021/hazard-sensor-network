@@ -3,6 +3,7 @@ use async_modbus::client::{read_inputs, write_holding};
 use defmt::{Format, debug};
 use embassy_nrf::saadc::{ChannelConfig, Config, InterruptHandler, Saadc};
 use embassy_nrf::{Peri, bind_interrupts, peripherals};
+use num_traits::float::FloatCore;
 
 //use nrf_pac::{radio::vals::State::Rx, wdt::regs::Config};
 //use nrf_pac::uarte::regs::Baudrate;
@@ -35,11 +36,27 @@ impl AdcSensors {
         100f32 - (((raw as f32 - SOIL_UPPER_BOUND) / SOIL_RANGE) * 100f32)
     }
 
-    pub async fn get_wind_speed(&mut self) -> i16 {
+    //Implemented the logic of ReadWindSpeed from the environment.ts file found in the pxt-iot-environment-kit
+
+    pub async fn get_wind_speed(&mut self) -> f32 {
         let mut buf = [0i16; 2];
         self.saadc.sample(&mut buf).await;
-        buf[WIND_SPEED_CHANNEL]
+        let raw = buf[WIND_SPEED_CHANNEL];
+        ((((raw as f32) / 1023f32) * 3100f32) / 40f32).round()
     }
+
+    // export function ReadWindSpeed(windspeedpin: AnalogPin): number {
+    //         let voltage = 0;
+    //         let windspeed = 0;
+    //         voltage = pins.map(
+    //             pins.analogReadPin(windspeedpin), value
+    //             0, fromLow
+    //             1023, fromHigh
+    //             0, toLow
+    //             Reference_VOLTAGE toHigh -> 3100
+    //         );
+    //         windspeed = voltage / 40;
+    //         return Math.round(windspeed)
 
     pub fn get_fault() -> Result<u16, SensorError> {
         todo!()

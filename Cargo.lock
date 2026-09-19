@@ -567,6 +567,7 @@ dependencies = [
  "embassy-time",
  "embedded-io-async 0.7.0",
  "nrf-pac",
+ "num-traits",
  "panic-probe",
  "static_cell",
 ]

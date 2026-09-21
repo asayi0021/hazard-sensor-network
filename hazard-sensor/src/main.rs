@@ -13,8 +13,11 @@ mod sensors;
 use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_nrf::*;
-use static_cell::ConstStaticCell;
+use static_cell::{ConstStaticCell, StaticCell};
 use embassy_time::Timer;
+use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
+use embassy_sync::mutex::Mutex;
+use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 
 /// Gas sensor I2C slave address
 const GAS_SENSOR_ADDR: u8 = 0x77;
@@ -34,10 +37,11 @@ static TX_BUFF1: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 /// Transmission buffer for I2C Bus 2
 static TX_BUFF2: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
+static I2C_BUS: StaticCell<Mutex<NoopRawMutex, twim::Twim>> = StaticCell::new();
+
 /// NRF52840 struct containing all necessary peripherals
 pub struct NRF52840 {
-    i2c1: twim::Twim<'static>,
-    i2c2: twim::Twim<'static>,
+    i2c: twim::Twim<'static>,
     // uart1: uarte::Uarte<'static>,
 }
 
@@ -45,16 +49,12 @@ impl NRF52840 {
     /// Initialise a new NRF52840 chip
     pub fn new() -> Self {
         let p = embassy_nrf::init(Default::default());
-        let i2c1_config = twim::Config::default();
-        let i2c2_config = twim::Config::default();
+        let i2c_config = twim::Config::default();
 
         // First I2C bus, on TWISPI0
-        let i2c1 = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, i2c1_config, TX_BUFF1.take());
+        let i2c = twim::Twim::new(p.TWISPI0, Irqs, p.P0_13, p.P0_14, i2c_config, TX_BUFF1.take());
 
-        // Second I2C bus, on TWISPI1
-        let i2c2 = twim::Twim::new(p.TWISPI1, Irqs, p.P0_15, p.P0_16, i2c2_config, TX_BUFF2.take());
-
-        NRF52840 { i2c1, i2c2 }
+        NRF52840 { i2c }
     }
 }
 
@@ -62,22 +62,27 @@ impl NRF52840 {
 async fn main(_spawner: Spawner) {
     info!("Hello, world!");
     let mcu = NRF52840::new();
+    let i2c_bus = Mutex::new(mcu.i2c);
+    let i2c_bus = I2C_BUS.init(i2c_bus);
 
-    // let mut gas_sensor =
-    //     match GasSensor::new(mcu.i2c1, GAS_SENSOR_ADDR).await {
-    //         Ok(sensor) => {
-    //             info!("GAS SENSOR initialised.");
-    //             sensor
-    //         },
-    //         Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
-    //     };
-    // match gas_sensor.init_config().await {
-    //     Ok(_) => info!("GAS SENSOR configuration success."),
-    //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
-    // };
+    let gas_i2c = I2cDevice::new(i2c_bus);
+    let rain_i2c = I2cDevice::new(i2c_bus);
+
+    let mut gas_sensor =
+        match GasSensor::new(gas_i2c, GAS_SENSOR_ADDR).await {
+            Ok(sensor) => {
+                info!("GAS SENSOR initialised.");
+                sensor
+            },
+            Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
+        };
+    match gas_sensor.init_config().await {
+        Ok(_) => info!("GAS SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    };
 
     let mut rainfall_sensor =
-        match RainfallSensor::new(mcu.i2c1, RAINFALL_SENSOR_ADDR).await {
+        match RainfallSensor::new(rain_i2c, RAINFALL_SENSOR_ADDR).await {
             Ok(sensor) => {
                 info!("RAINFALL SENSOR initialised.");
                 sensor

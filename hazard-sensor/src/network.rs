@@ -64,6 +64,7 @@ pub enum EncodeError {
     PayloadTooLong,
 }
 
+
 /// Errors when parsing a received frame/payload back into a packet/payload
 #[derive(Debug)]
 pub enum DecodeError {
@@ -75,6 +76,7 @@ pub enum DecodeError {
     PayloadTooLong,
     MacMismatch
 }
+
 
 /// Header - Route type (bits 0-1)
 #[derive(Debug, Clone, Copy)]
@@ -105,6 +107,7 @@ impl RouteType {
         matches!(self, Self::TransportFlood | Self::TransportDirect)
     }
 }
+
 
 /// Header - Payload type (bits 2-5)
 #[derive(Debug, Clone, Copy)]
@@ -146,9 +149,10 @@ impl PayloadType {
     }
 }
 
-/// Node paramters - Node ID 
-pub type NodeIdHash = u8; // u32 for larger hash sizes? 
-// only first byte of Ed2556 key is used
+
+/// Node ID -  u32 for larger hash sizes
+pub type NodeIdHash = u8; // only first byte of Ed2556 key is used, which is not currently implemented.
+
 
 /// Node ID hash size in bytes
 #[derive(Debug, Clone, Copy)]
@@ -177,6 +181,7 @@ impl HashSize {
         }
     }
 }
+
 
 // Used for matching keywords to process different request types.
 // Currently only implemented request type is to send all data.
@@ -239,7 +244,8 @@ impl RequestKey {
     }
 }
 
-/// MeshCore packet object 
+
+/// MeshCore packet object and related, encoding/decoding functions 
 struct Packet<'a> {
     pub payload_version: u8,
     pub route_type: RouteType,
@@ -319,7 +325,7 @@ impl<'a> Packet<'a> {
         write!(
             payload, 
             "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
-            r.wss, r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3, r.sms, r.tbs
+            r.wss.unwrap(), r.aqs.unwrap().0, r.aqs.unwrap().1, r.aqs.unwrap().2, r.aqs.unwrap().3, r.sms.unwrap(), r.tbs.unwrap()
         )
         .map_err(|_| EncodeError::PayloadTooLong)?;
         Ok(payload)
@@ -380,6 +386,7 @@ impl<'a> Packet<'a> {
     }
 }
 
+
 /// Advert payload type struct, used to update node clock to keep broadcast 
 /// timestamps accurate. 
 struct Advert<'a> {
@@ -403,26 +410,28 @@ impl<'a> Advert<'a> {
     }
 }
 
+
 /// Struct used for storing and passing around sensor readings, not all fields are always populated
 // NOTE: partial instances are only safe with send_group_text_single_sensor, never send_group_text_sensor_data
 #[derive(Clone, Copy, Debug)]
 pub struct SensorReadings {
-    pub wss: f32,   // May be worth changing these to pub Option<i16> etc, to avoid sending 0's when certain sensors are not polled 
-    // pub wds: u16,
-    pub aqs: (f64, f64, f64, u8), //(i32, u32, u32, i32),
-    pub sms: f32,
-    pub tbs: f64,
+    pub wss: Option<f32>,  
+    // pub wds: Option<f32>,
+    pub aqs: Option<(f64, f64, f64, u8)>, 
+    pub sms: Option<f32>,
+    pub tbs: Option<f64>,
 }
 
 impl SensorReadings {
     const fn empty() -> Self {
-        // Self { wss: 0, wds: 0, aqs: (0, 0, 0, 0), sms: 0, tbs: 0.0 }
-        Self { wss: 0.0, aqs: (0.0, 0.0, 0.0, 0), sms: 0.0, tbs: 0.0 }
+        Self { wss: None, aqs: None, sms: None, tbs: None }
     }
 }
+
 impl Default for SensorReadings {
     fn default() -> Self { Self::empty() }
 }
+
 
 
 //======================================================================================================================
@@ -494,11 +503,18 @@ pub fn send_group_text_sensor_data(r: &SensorReadings) -> Result<(), EncodeError
 fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<(), EncodeError> {
     let mut json: heapless::String<64> = heapless::String::new();
     match key {
-        RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
+        // OPTION_CONVERSION
+        // RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
+        // // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        // RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
+        // RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
+        // RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
+
+        RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss.unwrap()),
         // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
-        RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
-        RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
-        RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
+        RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.unwrap().0, r.aqs.unwrap().1, r.aqs.unwrap().2, r.aqs.unwrap().3),
+        RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms.unwrap()), 
+        RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs.unwrap()),
         RequestKey::DataAll => return send_group_text_sensor_data(&r),
     }.map_err(|_| EncodeError::PayloadTooLong)?;
 
@@ -812,9 +828,8 @@ fn mac_then_decrypt(
 //======================================================================================================================
 
 /// Calls all sensor poll functions to return readings to DATA requests and broadcasts.
+// NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 pub async fn poll_all(
-    // wss: &mut WindSpeedSensor,
-    // wds: &mut WindDirectionSensor,
     aqs: &mut GasSensor<I2cShared>,
     adc: &mut AdcSensors,
     tbs: &mut RainfallSensor<I2cShared>,
@@ -825,15 +840,15 @@ pub async fn poll_all(
     let sms_data = poll_sms(adc).await;
     let tbs_data = poll_tbs(tbs).await;
 
-    SensorReadings { wss:wss_data, aqs:aqs_data, sms:sms_data, tbs:tbs_data }
+    // SensorReadings { wss:Some(wss_data), wds:Some(wds_data), aqs:Some(aqs_data), sms:Some(sms_data), tbs:Some(tbs_data) }
+    SensorReadings { wss: Some(wss_data), aqs: Some(aqs_data), sms: Some(sms_data), tbs: Some(tbs_data) }
 }
 
 /// Poll the requested sensors returning partially populated sensor readings.
+// NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 async fn poll_req(
-    // wss: &mut WindSpeedSensor,
-    // wds: &mut WindDirectionSensor,
     aqs: &mut GasSensor<I2cShared>,
-    adc: &mut AdcSensors,
+    adc: &mut AdcSensors,         
     tbs: &mut RainfallSensor<I2cShared>,
     key: RequestKey,
 ) -> SensorReadings {
@@ -841,24 +856,23 @@ async fn poll_req(
     match key {
         RequestKey::Wss => {
             let wss_data = poll_wss(adc).await;
-            return SensorReadings { wss:wss_data, aqs:(0.0,0.0,0.0,0), sms:0.0, tbs:0.0 }
-            //return SensorReadings { wss:wss_data, aqs:None, sms:None, tbs:None }
+            return SensorReadings { wss:Some(wss_data), aqs:None, sms:None, tbs:None }
         }
-        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        // RequestKey::Wds => {
+        // let wds_data = poll_wds(adc).await;
+        // reutrn SensorReadings { wss:None, wds:Some(wds_data), aqs:None, sms:None, tbs:None}
+        // } 
         RequestKey::Aqs => {
             let aqs_data = poll_aqs(aqs).await;
-            return SensorReadings { wss:0.0, aqs:aqs_data, sms:0.0, tbs:0.0 }
-            //  return SensorReadings { wss:None, aqs:aqs_data, sms:None, tbs:None }
+             return SensorReadings { wss:None, aqs:Some(aqs_data), sms:None, tbs:None }
         }
         RequestKey::Sms => {
             let sms_data = poll_sms(adc).await;
-            return SensorReadings { wss:0.0, aqs:(0.0,0.0,0.0,0), sms:sms_data, tbs:0.0 }
-            //return SensorReadings { wss:None, aqs:None, sms:sms_data, tbs:None }
+            return SensorReadings { wss:None, aqs:None, sms:Some(sms_data), tbs:None }
         } 
         RequestKey::Tbs => {
             let tbs_data = poll_tbs(tbs).await;
-            return SensorReadings { wss:0.0, aqs:(0.0,0.0,0.0,0), sms:0.0, tbs:tbs_data }
-            // return SensorReadings { wss:None, aqs:None, sms:None, tbs:tbs_data }
+            return SensorReadings { wss:None, aqs:None, sms:None, tbs:Some(tbs_data) }
         }
         RequestKey::DataAll => {
             let r = poll_all(aqs, adc, tbs).await;
@@ -869,13 +883,14 @@ async fn poll_req(
 
 /// Set of sensor specific polling functions that return the raw data values.
 async fn poll_wss(adc: &mut AdcSensors) -> f32 { //i16
-    let r = adc.get_soil_moisture().await;
+    let r = adc.get_wind_speed().await;
     return r
 }
-// pub async fn poll_wds(/* wind direction sensor handle */) -> u16 { 
-//     // wds.get_wind_direction().await.unwrap()
+// async fn poll_wds(adc: &mut AdcSensors) -> f32 { 
+//     let r = adc.get_wind_direction().await;
+//     return r
 // }
-async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Option<f64>, Option<f64>, Option<f64>, Option<u8>
+async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Option<(f64, f64, f64, u8)>
     match aqs.get_measurements().await{
         Ok(r) => {
             info!("Polled aqs; aqs_tmp:{}, aqs_hum:{}, aqs_prs:{}, aqs_aqi:{}", r.0, r.1, r.2, r.3);
@@ -887,7 +902,7 @@ async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Op
         }
     }
 }
-async fn poll_sms(adc: &mut AdcSensors) -> f32 { //i16
+async fn poll_sms(adc: &mut AdcSensors) -> f32 { 
     let r = adc.get_soil_moisture().await;
     info!("Polled sms: {}",r);
     return r

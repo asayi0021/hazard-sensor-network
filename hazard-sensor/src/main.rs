@@ -1,58 +1,52 @@
 #![no_std]
 #![no_main]
 
-use {crate::sensors::wind_sensor::WindSensor, core::error::Error, defmt_rtt as _, panic_probe as _};
-use crate::network::{Advert, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, MAX_PAYLOAD_LEN, PUBLIC_CHANNEL_KEY, Packet, PayloadType, RouteType, SensorReadings, SPREADING_FACTOR, TX_POWER_DBM};
-
+// Module declaration
 mod sensors;
 mod network;
 mod network_testing;
 
-// use cortex_m::delay::Delay; // Caused delay import overlap, not used in network firmware
-use embassy_futures::select::{select, Either};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
-use embassy_nrf::gpio::{Level, Output, OutputDrive, Input, Pull};
-use sensors::wind_sensor;
-use defmt::{info, warn, error};
+// Imports from other modules
+use crate::network::{frame_handler, send_frame, poll_all, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM};
+use crate::sensors::{watchdog::{WatchdogTimer, WatchdogWindow},gas_sensor::GasSensor,adc_sensors::AdcSensors,tipping_bucket::{RainfallSensor,RAINFALL_SENSOR_ADDR}}; //
+
+
+// Embassy imports
+use embassy_futures::select::{select3, Either3}; 
+use embassy_sync::{mutex::Mutex, blocking_mutex::raw::{NoopRawMutex, CriticalSectionRawMutex}, channel::Channel}; //{raw::NoopRawMutex, Mutex}
+use embassy_nrf::*; 
+use embassy_nrf::{saadc::{ChannelConfig, Saadc},uarte::Uarte,gpio::{Level, Output, OutputDrive, Input, Pull}};
 use embassy_executor::Spawner;
-use embassy_nrf::*;
-use embassy_time::{Delay, Duration, Timer, Instant};
+use embassy_time::{Delay, Duration, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
-use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-use embassy_sync::blocking_mutex::Mutex;
-use static_cell::ConstStaticCell;
-use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
-use core::cell::RefCell;
+use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 
+// Other imports
+use static_cell::{ConstStaticCell, StaticCell};
+use core::sync::atomic::{AtomicI32, AtomicBool};
+use lora_phy::{LoRa, iv, RxMode, sx126x::{self, Sx1262, Sx126x, TcxoCtrlVoltage}, mod_params::{ModulationParams, PacketParams}};
+use {defmt_rtt as _, panic_probe as _};
+use defmt::{info, warn, error};
 
-use lora_phy::sx126x::{self, Sx1262, Sx126x, TcxoCtrlVoltage};
-use lora_phy::{DelayNs, LoRa, iv, RxMode}; 
-use lora_phy::mod_params::{Bandwidth, CodingRate, SpreadingFactor, ModulationParams, PacketParams};
-
+// Binding interupts to different buses.
 bind_interrupts!(struct Irqs {
     TWISPI0 => twim::InterruptHandler<peripherals::TWISPI0>;
+    TWISPI1 => twim::InterruptHandler<peripherals::TWISPI1>;
     SPIM3 => spim::InterruptHandler<peripherals::SPI3>;
+    UARTE1  => uarte::InterruptHandler<peripherals::UARTE1>;
+    SAADC => saadc::InterruptHandler;
 });
 
-// i2c tx buffer
-static TX_BUFF: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
+/// Transmission buffer for I2C Bus 1
+static TX_BUFF1: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
+/// Transmission buffer for I2C Bus 2
+static TX_BUFF2: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
-// sensor data holding 
-static LATEST_READINGS: Mutex<CriticalSectionRawMutex, RefCell<SensorReadings>> =
-    Mutex::new(RefCell::new(SensorReadings::empty()));
+/// I2C shared bus for RainfallSensor (tbs), GasSensor (aqs)
+static I2C_BUS: StaticCell<Mutex<NoopRawMutex, twim::Twim>> = StaticCell::new();
 
-// Initialise tx packet buffer                                                    
+/// Initialise tx packet buffer                                                    
 pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
-// NoopRawMutex has sync error from use in main (async) and radio_task (async)
-// static MESHCORE_TX_BUFF: Channel<NoopRawMutex, heapless::Vec<u8, { MAX_PACKET_LEN+1 }>, 4> = Channel::new();
-// MESHCORE_TX_BUFF: Defines packet transmission buffer where each packet is 256 (u8) 
-// bytes, and can store 4 packets at a time, can be increased. 
-// MAX_PACKET_LEN+1 = 256 (Redundancy) 
-// BUFF_SIZE (4), was chosen as a power of 2 for memory efficiency
-//CriticalSelectionRawMutex maybe more appropriate depedning on async/
-// interrupt implementation, as far as I can tell embassy_executor will 
-// only access it from a single task it spawns at a time.
 
 /// Local clock, expressed as an offset applied to time-since-boot.
 ///   current_timestamp = seconds_since_boot + CLOCK_OFFSET
@@ -63,29 +57,56 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
 pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);    
 
+/// Gas sensor I2C slave address
+const GAS_SENSOR_ADDR: u8 = 0x77;
+
+/// Shortened type for GasSensor and RainfallSensor objects
+pub type I2cShared = I2cDevice<'static, NoopRawMutex, twim::Twim<'static>>;
+
+/// nRF52 custom object for storing initialised buses for different peripheral protocols.
 pub struct NRF52840 {
-    i2c: twim::Twim<'static>,
+    i2c1: twim::Twim<'static>,
+    i2c2: twim::Twim<'static>,
+    saadc: Saadc<'static, 2>,
 }
 
 impl NRF52840 {
     pub fn new(
-        twispi0: Peri<'static, peripherals::TWISPI0>, 
-        sda: Peri<'static, peripherals::P0_13>, 
-        scl: Peri<'static, peripherals::P0_14>,
-    ) -> Self { // Changed the input to take pins since p is singleton. p must not be created and passed from main 
-        // let p = embassy_nrf::init(Default::default());
-        let i2c_config = twim::Config::default(); 
+        twispi0: Peri<'static, peripherals::TWISPI0>,
+        twispi1: Peri<'static, peripherals::TWISPI1>,
+        sda1: Peri<'static, peripherals::P0_13>, 
+        scl1: Peri<'static, peripherals::P0_14>,
+        sda2: Peri<'static, peripherals::P0_15>, 
+        scl2: Peri<'static, peripherals::P0_16>,
+        saadc: Peri<'static, peripherals::SAADC>,
+        adc_channel0: Peri<'static, peripherals::P0_31>, 
+        adc_channel1: Peri<'static, peripherals::P0_03>,
+    ) -> Self { 
+        // Initialise config for each bus
+        let i2c_config1 = twim::Config::default();
+        let i2c_config2 = twim::Config::default();
+        let adc_config = saadc::Config::default();
 
-        // Initialize the TWIM driver
-        let mut i2c = twim::Twim::new(twispi0, Irqs, sda, scl, i2c_config, TX_BUFF.take()); 
+        // Initialise saadc channels
+        let channel0 = ChannelConfig::single_ended(adc_channel0);
+        let channel1 = ChannelConfig::single_ended(adc_channel1); 
+
+        // Initialize the i2c drivers
+        let i2c1 = twim::Twim::new(twispi0, Irqs, sda1, scl1, i2c_config1, TX_BUFF1.take()); 
+        let i2c2 = twim::Twim::new(twispi1, Irqs, sda2, scl2, i2c_config2, TX_BUFF2.take()); 
+
+        // Intitialise saadc
+        let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
 
         NRF52840 {
-            i2c,
+            i2c1,
+            i2c2,
+            saadc
         }
     }
 }
 
-/// Object for initalising the Sx1262 transceiver and it's assigned parameters.
+/// Sx1262 Object for initalising the transceiver and it's assigned parameters.
 pub struct SX1262 {
     lora_radio: LoRa<Sx126x<ExclusiveDevice<spim::Spim<'static>, gpio::Output<'static>, embassy_time::Delay>,
             iv::GenericSx126xInterfaceVariant<gpio::Output<'static>, gpio::Input<'static>>,
@@ -98,11 +119,11 @@ pub struct SX1262 {
 impl SX1262 {
     pub async fn new(
         // SX1262 pins
-        reset: Peri<'static, peripherals::P1_06>, 
-        busy: Peri<'static, peripherals::P1_14>, 
-        dio1: Peri<'static, peripherals::P1_15>, 
-        rf_tx_en: Peri<'static, peripherals::P1_07>, // In RAK4630 datasheet, the DIO2 is used to control antenna switch,
-        rf_rx_en: Peri<'static, peripherals::P1_05>, //and that the GPIO 1.07 pin should not be initialised.
+        reset: Peri<'static, peripherals::P1_06>,    // In RAK4630 datasheet, the DIO2
+        busy: Peri<'static, peripherals::P1_14>,     // is used to control antenna switch,
+        dio1: Peri<'static, peripherals::P1_15>,     // and that the GPIO 1.07 pin should
+        rf_tx_en: Peri<'static, peripherals::P1_07>, // and that the GPIO 1.07 pin should 
+        rf_rx_en: Peri<'static, peripherals::P1_05>, // not be initialised.
         // spi bus pins
         spi3: Peri<'static, peripherals::SPI3>,
         sck: Peri<'static, peripherals::P1_11>,
@@ -111,30 +132,23 @@ impl SX1262 {
         nss: Peri<'static, peripherals::P1_10>,
     ) -> Self {
         // Convert pins to outputs/inputs
-        let reset_o = Output::new(reset, Level::High, OutputDrive::Standard); //NRESET P1.06
-        let busy_i = Input::new(busy, Pull::None); //BUSY P1.14
-        let dio1_i = Input::new(dio1, Pull::Down); //DIO1 P1.15 
+        let reset_o = Output::new(reset, Level::High, OutputDrive::Standard);        //NRESET P1.06
+        let busy_i = Input::new(busy, Pull::None);                                                          //BUSY P1.14
+        let dio1_i = Input::new(dio1, Pull::Down);                                                          //DIO1 P1.15 
         let rf_tx_en_o = Output::new(rf_tx_en, Level::High, OutputDrive::Standard);
-        let rf_rx_en_o = Output::new(rf_rx_en, Level::High, OutputDrive::Standard); //ANT_SW P1.05
-        // nss_pin as outpuit
+        let rf_rx_en_o = Output::new(rf_rx_en, Level::High, OutputDrive::Standard);  //ANT_SW P1.05
+        // nss_pin as output
         let nss_o = Output::new(nss, Level::High, OutputDrive::Standard);
-
-        // Setup spi config
-        let spi_config = spim::Config::default(); 
-        // For non-default spi config change above to mut and use key fields below:
-        // spi_config.frequency
-        // spi_config.mode 
 
         // Setup Sx1262 config
         let sx1262_config = sx126x::Config {
             chip: Sx1262,
-            tcxo_ctrl: Some(sx126x::TcxoCtrlVoltage::Ctrl1V8), // Pin is dio3
-            use_dcdc: true, //use_dio2_as_rfswitch - deprecated format for lora-phy
-            rx_boost: true, //rx boost useful?
+            tcxo_ctrl: Some(sx126x::TcxoCtrlVoltage::Ctrl1V8), 
+            use_dcdc: true, 
+            rx_boost: true, 
         };
         
         // Initialise InterfaceVariant lora-phy object
-        // let iv = lora_phy::iv::GenericSx126xInterfaceVariant::new(reset, dio1, busy, Some(rf_switch_rx), Some(rf_switch_tx)).unwrap();
         let iv = match lora_phy::iv::GenericSx126xInterfaceVariant::new(reset_o, dio1_i, busy_i, Some(rf_rx_en_o), Some(rf_tx_en_o)) {
             Ok(iv) => iv,
             Err(e) => {
@@ -142,6 +156,9 @@ impl SX1262 {
                 panic!("interface variant intialisation failed");
             }
         };
+
+        // Setup spi config for Sx1262
+        let spi_config = spim::Config::default(); 
 
         // Initialise the SPI driver between the nRF52 and the Sx1262
         let spi = spim::Spim::new(spi3, Irqs, sck, miso, mosi, spi_config);
@@ -158,7 +175,6 @@ impl SX1262 {
             .await //maybe need to extract from result here? 
             .expect("failed to initalise SX1262 - lora_radio object"); 
 
-            // These functions may be better suited to be used in radio_task or main 
         // Initialise modulation parameters attached to lora_radio field of SX1262 object 
         let mod_params: ModulationParams = lora_radio.create_modulation_params(SPREADING_FACTOR, BANDWIDTH, CODING_RATE, FREQ_HZ)
             .expect("failed to create modulation params in SX1262 constructor.");
@@ -183,16 +199,26 @@ impl SX1262 {
     }
 }
 
-// main
+/// Main - initialises transceiver and peripherals, then spawns the radio_task.
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    info!("Main start");
+
     // Initialisation of peripherals struct p 
     let p = embassy_nrf::init(Default::default());
 
-    // nRF52 pin definitions to pass to constructor
+        // nRF52 pin definitions to pass to constructor
+    // i2c pins
     let twispi0 = p.TWISPI0;
-    let sda = p.P0_13; //sda: peripherals::P0_13
-    let scl = p.P0_14; //scl: peripherals::P0_14
+    let twispi1 = p.TWISPI1;
+    let sda1 = p.P0_13; //sda: peripherals::P0_13
+    let scl1 = p.P0_14; //scl: peripherals::P0_14
+    let sda2 = p.P0_15; 
+    let scl2 = p.P0_16; 
+    // adc pins
+    let saadc = p.SAADC;
+    let adc_channel0 = p.P0_31;
+    let adc_channel1 = p.P0_03; 
 
     // SX1262 pin definitions to pass to constructor
     let reset = p.P1_06;
@@ -207,73 +233,78 @@ async fn main(_spawner: Spawner) {
     let mosi = p.P1_12;
     let nss = p.P1_10;
 
-    // Initalisation of custom mcu and transciever objects
-    let mcu = NRF52840::new(twispi0,sda,scl);
-    let radio = SX1262::new(reset, busy, dio1, 
-        rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
+    // gpio pins for MIKROE-4416 (watchdog)
+    // let io1 = Output::new(p.P0_17, Level::Low, OutputDrive::Standard); //wdi
+    // let io2: Output<'_> = Output::new(p.P1_02, Level::High, OutputDrive::Standard); //s0
+    // NOTE: io2 is stated as a controlling pin for the 3V3_S supply voltage rail, it seems that this rail is seperate
+    // from the 3V3 VDD pin on the J-headers and only matters for the sensor slots but this may be an error point.
 
-    // let ws = WindSensor::new(mcu.i2c);
+    // Initialisation of RAK4630 objects
+    let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1);
+    let radio = SX1262::new(reset, busy, dio1, rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
 
-    // Start async radio task - buffers global therefore dont need to be passed 
-    _spawner.spawn(radio_task(radio)).unwrap();
-    
-    //---TESTING LOOPS---------------------------------------------------------
-    // Testing data - testing data now built into reply functions 
-    let wss_data: i16 = 1;
-    let wds_data: u16 = 2;
-    let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
-    let sms_data: i16 = 4;
-    let tbs_data: f32 = 5.0;
+    // Initialisation of shared I2C bus
+    let i2c_bus = Mutex::new(mcu.i2c1);
+    let i2c_bus = I2C_BUS.init(i2c_bus);
 
-    // --- ROLE: modal periodic requester ---
-    // loop {
-    //     Timer::after(Duration::from_secs(10)).await;
-    //
-    //     // --- Raw custom request testing block ---
-    //     // if let Err(e) = network_testing::send_request_raw_custom() {
-    //     //     warn!("failed to send RawCustom request: {:?}", defmt::Debug2Format(&e));
-    //     // }
+    // Create seperate objects to pass to constructors for shared I2C bus 
+    let gas_i2c = I2cDevice::new(i2c_bus);
+    let rain_i2c = I2cDevice::new(i2c_bus);
 
-    //     // --- Public-channel request testing block ---
-    //     if let Err(e) = network_testing::send_request_group_text() {
-    //         warn!("failed to send GRP_TXT request: {:?}", defmt::Debug2Format(&e));
-    //     } else {
-    //         info!("public channel data request sent");
-    //     }
-    // }
+        // Initialisation of sensor objects
+    // ADC sensors - soil moisture (sms) and wind speed (wss)
+    let adc = AdcSensors::new(mcu.saadc);           
 
-    // --- ROLE: sensor node broadcaster --- 
-    // loop {
-    //     Timer::after(Duration::from_secs(15)).await;
+    // Gas sensor
+    let mut aqs = match GasSensor::new(gas_i2c, GAS_SENSOR_ADDR).await { // currently on same i2c bus as tbs
+        Ok(sensor) => {
+            info!("GAS SENSOR initialised.");
+            sensor
+        },
+        Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
+    };
+    match aqs.init_config().await {
+        Ok(_) => info!("GAS SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    };
 
-    //     // --- Raw custom broadcast testing block --- 
-    //     // if let Err(e) = network::send_sensor_broadcast() {
-    //     //     warn!("failed to send sensor broadcast: {:?}", defmt::Debug2Format(&e));
-    //     // }
+    // Tipping bucket (rainfall) sensor
+    let mut tbs =
+        match RainfallSensor::new(rain_i2c, RAINFALL_SENSOR_ADDR).await {
+            Ok(sensor) => {
+                info!("RAINFALL SENSOR initialised.");
+                sensor
+            },
+            Err(e) => panic!("Could not intialise RAINFALL SENSOR: {:?}", e),
+        };
+    match tbs.init_config().await {
+        Ok(_) => info!("RAINFALL SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
+    };
 
-    //     // --- Public-channel broadcast testing block --- 
-    //     if let Err(e) = network::send_group_text_sensor_data() {
-    //         error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
-    //     } else {
-    //         info!("public channel broadcast sent");
-    //     }
-    // }
-
+    // Start radio task - sends queued transmissions and handles recieved packets
+    _spawner.spawn(radio_task(radio, aqs, adc, tbs)).unwrap();
 }
 
 
 //----MeshCore network related firmware down------------------------------------
 
 /// radio_task drains the MESHCORE_TX_BUFF when it is not empty, and calls 
-/// frame_handler when anything is recieved by the transceiver. 
+/// frame_handler when anything is recieved by the transceiver. Now handles 
+/// period broadcasts as well. 
 #[embassy_executor::task]
 async fn radio_task(
-    mut radio: SX1262,
+    mut radio: SX1262,    
+    // mut wds: WindDirectionSensor,    
+    mut aqs: GasSensor<I2cShared>,          // It may be worth making a senors struct
+    mut adc: AdcSensors,                    // to centralise the different sensors
+    mut tbs: RainfallSensor<I2cShared>,     // for passing between functions/tasks
 ){
-    // Initialise recieved packet buffer locally - possible issue 
+    // Initialise recieved packet buffer locally
     let mut meshcore_rx_buf = [0u8; MAX_PACKET_LEN];
 
     loop {
+        // Set transceiver to receive mode to listen for incoming packets
         radio.lora_radio.prepare_for_rx(RxMode::Continuous, &radio.mod_params, &radio.rx_pkt_params)
             .await
             .expect("Prepare for rx (continuous mode) failed");
@@ -284,199 +315,77 @@ async fn radio_task(
         // This currently poses no issues as the only incoming packets of note 
         // are requests and all the broadcasts send out the same data as a 
         // response. However this should be investigated as a possible breakpoint. 
-        match select(
+        match select3(
             radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf),
             MESHCORE_TX_BUFF.receive(),
+            Timer::after(Duration::from_secs(15)), //Change back after testing 3600
         ).await {
-            Either::First(Ok((len, status))) => {
-                let data = &meshcore_rx_buf[..len as usize];
+            // Possibility 1: Packet recieved (success) 
+            Either3::First(Ok((len, status))) => {
+                let frame_data = &meshcore_rx_buf[..len as usize];
                 info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
-                frame_handler(data);
+                frame_handler(frame_data, &mut aqs, &mut adc, &mut tbs).await;
             }
-            Either::First(Err(e)) => {
-                warn!("radio rx error {:?}", defmt::Debug2Format(&e));
-            }
-            Either::Second(frame) => {
-                send_frame(&mut radio, &frame).await;
-            }
-        }
-    }
-}
-
-/// Send a frame - MeshCore packet inside LoRa frame - may move to network.rs for clarity
-async fn send_frame(
-    radio: &mut SX1262,
-    frame: &[u8],
-){
-    // Ready the radio for transmission with a frame
-    if let Err(e) = radio.lora_radio.prepare_for_tx(&radio.mod_params, &mut radio.tx_pkt_params, TX_POWER_DBM, frame)
-    .await {
-        warn!("prepare_for_tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
-        return;
-    }
-    // Attempt transmission
-    if let Err(e) = radio.lora_radio.tx().await {
-        warn!("tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
-    } else {
-        info!("TX successful, {} bytes sent", frame.len())
-    }
-}
-
-/// Process incoming frame data, react according to packet content.
-pub fn frame_handler(raw_frame_data: &[u8]) { // , ws: &mut WindSensor passed in to make calls 
-    match Packet::decode(raw_frame_data) {
-        Ok(pkt) => {
-            // Log received packet info
-            info!(
-                "MeshCore packet: route={:?} type={:?} hops={} payload_len={}",
-                defmt::Debug2Format(&pkt.route_type),
-                defmt::Debug2Format(&pkt.payload_type),
-                pkt.path.len(),
-                pkt.payload.len(),
-            );
-            info!("raw payload bytes: {:02x}", pkt.payload); // defmt can format &[u8] as hex directly
-            // Determine action based on rx payload type 
-            match pkt.payload_type {
-                PayloadType::Request => {
-                        info!("Recieved Request packet; packet ignored.");
-                        // Possible extension to move away from RawCustom reliance.
-                        // Extension may be better suited to using GroupText for 
-                        // both requests and responses
-                }  
-                PayloadType::Response => {
-                    info!("Recieved Response packet; packet ignored.");
-                }
-                PayloadType::TextMessage => {
-                    info!("Recieved TextMessage packet; packet ignored.");
-                    // Feed into decryption func if extended to direct message 
-                }
-                PayloadType::Ack => {
-                    info!("Recieved Ack packet; packet ignored.");
-                }
-                // The clock update based on adverts could potentially be abused
-                // by malicious advert packets being injected into the network.
-                // It is therefore a security risk, but a low one. 
-                PayloadType::Advert => match network::Advert::decode(pkt.payload){
-                    Ok(adv) => {
-                        network::sync_clock_from_received(adv.timestamp);
-                        info!("Advert received from node with public key: {:?}, advert info dropped.", adv.public_key);
-                    }
-                    Err(e) => {
-                        error!("Advert decode failed: {:?} - timestamp not updated.", defmt::Debug2Format(&e))
-                    }
-                }
-                PayloadType::GroupText => match network::GroupTextEnvelope::decode(pkt.payload) {
-                    Ok(env) if env.channel_hash == network::channel_hash(&network::PUBLIC_CHANNEL_KEY) => {
-                        let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-                        match network::mac_then_decrypt(&network::PUBLIC_CHANNEL_KEY, env.mac, env.ciphertext, &mut plaintext) {
-                            Ok(()) => {
-                                if plaintext.len() >= 4 {
-                                    let received_ts = u32::from_le_bytes([plaintext[0], plaintext[1], plaintext[2], plaintext[3]]);
-                                    network::sync_clock_from_received(received_ts);
-                                }
-                                match network::RequestKey::parse(&plaintext) {
-                                    Some(network::RequestKey::DataAll) => {
-                                        info!("GRP_TXT DATA request recognised — building response");
-                                        if let Err(e) = network::send_group_text_sensor_data() {
-                                            warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
-                                        }
-                                    }
-                                    // Some(network::RequestKey::Wss) => { Reformatted to neater 
-                                    //     info!("GRP_TXT WSS request recognised — building response");
-                                    //     let wss_data: i16 = 1;
-                                        
-                                    // }
-                                    // Some(network::RequestKey::Wds) => {
-                                    //     info!("GRP_TXT WDS request recognised — building response");
-                                    //     let wds_data: u16 = 2;
-                                
-                                    // }
-                                    // Some(network::RequestKey::Aqs) => {
-                                    //     info!("GRP_TXT AQS request recognised — building response");
-                                    //     let aqs_data: (i32, u32, u32, i32) = (3, 3, 3, 3);
-                                    
-                                    // }
-                                    // Some(network::RequestKey::Sms) => {
-                                    //     info!("GRP_TXT SMS request recognised — building response");
-                                    //     let sms_data: i16 = 4;
-
-                                    // }
-                                    // Some(network::RequestKey::Tbs) => {
-                                    //     info!("GRP_TXT TBS request recognised — building response");
-                                    //     let tbs_data: f32 = 5.0;
-                                    // }
-                                    Some(key) => { // key should be network::RequestKey ?
-                                        info!("GRP_TXT single-sensor request recognised: {:?}", defmt::Debug2Format(&key));
-                                        if let Err(e) = network::send_group_text_single_sensor(key) {
-                                            warn!("failed to send GRP_TXT single-sensor response: {:?}", defmt::Debug2Format(&e));
-                                        }
-                                    }
-                                    None => info!("GRP_TXT message not a recognised command; ignored"),
-                                    }
-                            }
-                            Err(e) => warn!("GRP_TXT MAC/decrypt failed: {:?}", defmt::Debug2Format(&e)),
-                        }
-                    }
-                    Ok(env) => info!("GRP_TXT on unknown channel (hash={}); ignored", env.channel_hash),
-                    Err(e) => warn!("failed to parse GroupText envelope: {:?}", defmt::Debug2Format(&e)),
-                }
-                
-                PayloadType::GroupData => {
-                    info!("Recieved GroupData packet; packet ignored.");
-                }
-                PayloadType::AnonRequest => {
-                    info!("Recieved AnonRequest packet; packet ignored.");
-                }
-                PayloadType::Path => {
-                    info!("Recieved Path packet; packet ignored.");
-                }
-                PayloadType::Trace => {
-                    info!("Recieved Trace packet; packet ignored.");
-                }
-                PayloadType::Multipart => {
-                    info!("Recieved Multipart packet; packet ignored.");
-                }
-                PayloadType::Control => {
-                    info!("Recieved Control packet; packet ignored.");
-                    // Possibly used with MQTT MeshCore extension for node health checks 
-                }
-                // Currently unused packet type.
-                PayloadType::RawCustom => {
-                    info!("Recieved RawCustom packet; packet ignored.");
-                    match pkt.payload.split_first() {
-                        Some((&network::RAW_CUSTOM_REQUEST_TAG, _rest)) => {
-                            info!("received request for all sensor data");
-                            if let Err(e) = network::send_sensor_broadcast() {
-                                warn!("failed to send RawCustom sensor data: {:?}", defmt::Debug2Format(&e));
-                            }
-                        }
-                        Some((&network::RAW_CUSTOM_RESPONSE_TAG, rest)) => {
-                            if let Ok(json_str) = core::str::from_utf8(rest) {
-                                info!("received sensor JSON: {}", json_str);
-                            } else {
-                                warn!("sensor-data RawCustom payload was not valid UTF-8");
-                            }
-                        }
-                        Some((other, _)) => warn!("RawCustom payload with unknown tag: {}", other),
-                        None => warn!("RawCustom payload was empty"),
-                    }
-                }
-                other => {
-                    info!("unhandled payload type {:?}", defmt::Debug2Format(&other));
+            // Possibility 1: Packet recieved (failure) 
+            Either3::First(Err(e)) => warn!("radio rx error {:?}", defmt::Debug2Format(&e)),
+            // Possibility 2: Packet in buffer ready to send out 
+            Either3::Second(frame) => send_frame(&mut radio, &frame).await,
+            // Possibility 3: Periodic broadcast reached
+            Either3::Third(()) => {
+                let r = poll_all(&mut aqs, &mut adc, &mut tbs).await;
+                if let Err(e) = network::send_group_text_sensor_data(&r) {
+                    error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
+                } else {
+                    info!("public channel broadcast sent");
                 }
             }
         }
-        Err(e) => warn!("failed to parse packet in frame_handler: {:?}", defmt::Debug2Format(&e)),
     }
 }
 
-pub fn get_latest_readings() -> SensorReadings {
-    LATEST_READINGS.lock(|cell| *cell.borrow())
-}
 
-/// Called by whatever eventually does real sensor polling — a periodic
-/// task calling this, or calling it before get_latest_sensor_readings
-/// is the only sensor integration point needed.
-pub fn update_readings(new: SensorReadings) {
-    LATEST_READINGS.lock(|cell| *cell.borrow_mut() = new);
-}
+//----Watchdog related firmware------------------------------------------------
+
+// Watchdog task replies to initial pulse within the window, then disables the
+// the watchdog until a reset (loss of power)
+// #[embassy_executor::task]
+// async fn watchdog_task(mut watchdog: WatchdogTimer<Output<'static>, Output<'static>>) {
+//     // CWD=NC, SET0=0, SET1=0: tWDL(max)=25.9ms, tWDU(min)=46.8ms
+//     let mut ticker = Timer::every(Duration::from_millis(35));
+//     loop {
+//         ticker.next().await;
+//         if watchdog.send_pulse().await.is_err() {
+//             defmt::error!("watchdog pulse failed");
+//         }
+//     }
+// }
+
+// et mut watchdog = WatchdogTimer::new(io1, io2).unwrap();
+
+//     // 4. Disable again — takes effect immediately regardless of timing
+//     watchdog.set_window(WatchdogWindow::Disabled).unwrap();
+//     info!("Watchdog disabled");
+
+//     info!("RESESTABLISH RST LINK");
+
+//     Timer::after_secs(5).await;
+
+//     info!("Test 1");
+
+//     // Configure watchdog
+//     watchdog.set_window(WatchdogWindow::Ratio1To8).unwrap(); 
+//     info!("Set the watchdog window");
+
+//     // 2. Wait out t_WD-setup with margin before WDI is recognized
+//     Timer::after_micros(500).await;
+//     info!("Waiting for watchdog setup time and for window");
+
+//     // 3. Send the mandatory first pulse, well inside tWDU(min) = 92.7 ms
+//     watchdog.send_pulse().await.unwrap();
+//     info!("Watchdog WDI pulse sent");
+
+//     watchdog.set_window(WatchdogWindow::Disabled).unwrap();
+//     info!("Watchdog disabled");
+
+//     // Start async watchdog task - requires quick initalisation to pulse in the initial window on time.
+//     // _spawner.spawn(watchdog_task(watchdog)).unwrap();

@@ -1,21 +1,18 @@
 use lora_phy::mod_params::{Bandwidth, CodingRate, SpreadingFactor};
 use heapless::{String,Vec};
-use defmt::{info, warn};
+use defmt::{info, warn, error};
 use core::fmt::Write; 
 use sha2::{Digest, Sha256};
 use aes::Aes128;
 use aes::cipher::{BlockCipherEncrypt, BlockCipherDecrypt, Array, KeyInit};
 use hmac::{Hmac, Mac};
 use embassy_time::Instant;
-use core::sync::atomic::{AtomicI32, AtomicBool, Ordering};
-use core::cell::RefCell;
-use embassy_sync::blocking_mutex::Mutex;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use core::sync::atomic::Ordering;
 
 
-
-// Imported objects/functions from main
-use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET, LATEST_READINGS, get_latest_readings, update_readings};
+// Imported objects/functions from main and sensors module.
+use crate::sensors::{gas_sensor::GasSensor, adc_sensors::AdcSensors, tipping_bucket::RainfallSensor};
+use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET, I2cShared, SX1262}; // DECPRECATED IMPROTS , LATEST_READINGS, get_latest_readings, update_readings
 
 //----MeshCore and LoRa related constants---------------------------------------
 
@@ -183,7 +180,7 @@ pub enum RequestKey {
     DataAll,    // Data from full sensor suite 
     // Below keys are for extending request functionality to sensor specific requests.
     Wss, // = "WSS"     // Wind speed sensor
-    Wds, // = "WDS"     // Wind direction sensor
+    // Wds, // = "WDS"     // Wind direction sensor
     Aqs, // = "AQS"     // Air quality sensor 
     Sms, // = "SMS"     // Soil moisture sensor 
     Tbs, // = "TBS"     // Tipping bucket sensor 
@@ -194,7 +191,7 @@ impl RequestKey {
     const DATA_ALL_KEYWORD: &'static str = "DATA";
     // Below keys are for extending request functionality to sensor specific requests.
     const WSS_KEYWORD: &'static str = "WSS";
-    const WDS_KEYWORD: &'static str = "WDS";
+    // const WDS_KEYWORD: &'static str = "WDS";
     const AQS_KEYWORD: &'static str = "AQS";
     const SMS_KEYWORD: &'static str = "SMS";
     const TBS_KEYWORD: &'static str = "TBS";
@@ -222,9 +219,9 @@ impl RequestKey {
             return None;
         }
 
-        const KEYWORDS: [(&str, RequestKey); 6] = [
+        const KEYWORDS: [(&str, RequestKey); 5] = [
             (RequestKey::WSS_KEYWORD, RequestKey::Wss),
-            (RequestKey::WDS_KEYWORD, RequestKey::Wds),
+            // (RequestKey::WDS_KEYWORD, RequestKey::Wds),
             (RequestKey::AQS_KEYWORD, RequestKey::Aqs),
             (RequestKey::SMS_KEYWORD, RequestKey::Sms),
             (RequestKey::TBS_KEYWORD, RequestKey::Tbs),
@@ -316,17 +313,18 @@ impl<'a> Packet<'a> {
     pub fn encode_payload( 
         // NEED TO ADD OPTION FOR ALL INPUTS BUT THROW ERROR IF NO INPUT
         // NEED TO HAVE DIFFERENT CASES FOR DATA ALL AS CURRENT AND SINGLE SENSOR REQ
-        wss_data: &i16,                     // Wind speed sensor  
-        wds_data: &u16,                     // Wind direction sensor - NEED TO VERIFT SIGNED OR UNSIGNED
-        aqs_data: &(i32, u32, u32, i32),    // 4-tuple of gas sensor values
-        sms_data: &i16,                     // Soil moisture sensor 
-        tbs_data: &f32,                     // Tipping bucket sensor - floating point currently
+        r: &SensorReadings,
+        // wss_data: &i16,                     // Wind speed sensor  
+        // wds_data: &u16,                     // Wind direction sensor - NEED TO VERIFT SIGNED OR UNSIGNED
+        // aqs_data: &(i32, u32, u32, i32),    // 4-tuple of gas sensor values
+        // sms_data: &i16,                     // Soil moisture sensor 
+        // tbs_data: &f32,                     // Tipping bucket sensor - floating point currently
     ) -> Result<String<MAX_JSON_LEN>, EncodeError>{
         let mut payload: String<MAX_JSON_LEN> = String::new();
         write!(
             payload, 
-            "{{\"wss\":{},\"wds\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
-            wss_data, wds_data, aqs_data.0, aqs_data.1, aqs_data.2, aqs_data.3, sms_data, tbs_data
+            "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
+            r.wss, r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3, r.sms, r.tbs
         )
         .map_err(|_| EncodeError::PayloadTooLong)?;
         Ok(payload)
@@ -410,19 +408,21 @@ impl<'a> Advert<'a> {
     }
 }
 
-
+// Struct used for storing and passing around sensor readings, not all fields are always populated
+// partial instances are only safe with send_group_text_single_sensor, never send_group_text_sensor_data
 #[derive(Clone, Copy, Debug)]
 pub struct SensorReadings {
-    pub wss: i16,
-    pub wds: u16,
-    pub aqs: (i32, u32, u32, i32),
-    pub sms: i16,
-    pub tbs: f32,
+    pub wss: f32,   // May be worth changing these to pub Option<i16> etc, to avoid sending 0's when certain sensors are not polled 
+    // pub wds: u16,
+    pub aqs: (f64, f64, f64, u8), //(i32, u32, u32, i32),
+    pub sms: f32,
+    pub tbs: f64,
 }
 
 impl SensorReadings {
     pub const fn empty() -> Self {
-        Self { wss: 0, wds: 0, aqs: (0, 0, 0, 0), sms: 0, tbs: 0.0 }
+        // Self { wss: 0, wds: 0, aqs: (0, 0, 0, 0), sms: 0, tbs: 0.0 }
+        Self { wss: 0.0, aqs: (0.0, 0.0, 0.0, 0), sms: 0.0, tbs: 0.0 }
     }
 }
 impl Default for SensorReadings {
@@ -433,10 +433,9 @@ impl Default for SensorReadings {
 
 /// Called for periodic sensor-data broadcast via RawCustom, for public channel
 /// broadcast see: send_group_text_sensor_data
-pub fn send_sensor_broadcast() -> Result<(), EncodeError> {
-    // 
-    let r = get_latest_readings();
-    let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
+pub fn send_sensor_broadcast(r: &SensorReadings) -> Result<(), EncodeError> {
+    //let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
+    let json = Packet::encode_payload(&r)?;
     let response_payload = build_sensor_data_frame(&json)?; // adds the missing tag byte
 
     let pkt = Packet::originate(RouteType::Flood, PayloadType::RawCustom, &response_payload)?;
@@ -445,7 +444,7 @@ pub fn send_sensor_broadcast() -> Result<(), EncodeError> {
     let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
     frame.extend_from_slice(&buf[..len]).map_err(|_| EncodeError::PayloadTooLong)?;
 
-    if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
+    if MESHCORE_TX_BUFF.try_send(frame).is_err() {
         warn!("tx queue full, dropping sensor broadcast");
     }
     Ok(())
@@ -458,60 +457,6 @@ pub fn build_sensor_data_frame(json: &str) -> Result<heapless::Vec<u8, MAX_PAYLO
     buf.extend_from_slice(json.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
     Ok(buf)
 }
-
-// DEPRECATED SEND ALL DATA FUNCTION BEFORE SINGLE SENSOR REQUEST ADDED
-// // Function to send data to group_text (public channel), for broadcast or response
-// pub fn send_group_text_sensor_data( // NEED TO ADD OPTION FOR ALL INPUTS BUT THROW ERROR IF NO INPUT
-//     wss_data: &i16,
-//     wds_data: &u16,
-//     aqs_data: &(i32, u32, u32, i32),
-//     sms_data: &i16,
-//     tbs_data: &f32,
-// ) -> Result<(), EncodeError> {
-//     let json = Packet::encode_payload(wss_data, wds_data, aqs_data, sms_data, tbs_data)?;
-
-//     // "hazard-sensor-<id>: <json>" — chat-message shape so a human with the
-//     // app open sees a readable reply, and NODE_ID lets multiple nodes'
-//     // replies to the same broadcast be told apart.
-//     let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
-//     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json)
-//         .map_err(|_| EncodeError::PayloadTooLong)?;
-
-//         // TESTING ALTERNATE FORMAT THAT INCLUDES A BYTE FOR FLAGS
-//     // let timestamp: u32 = get_current_timestamp(); 
-//     // let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-//     // plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-//     // plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-
-//     let timestamp: u32 = get_current_timestamp();
-//     let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-//     plaintext.extend_from_slice(&timestamp.to_le_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-//     plaintext.push(0x00).map_err(|_| EncodeError::PayloadTooLong)?; // flags/txt_type byte
-//     plaintext.extend_from_slice(response_text.as_bytes()).map_err(|_| EncodeError::PayloadTooLong)?;
-
-//     let mut ciphertext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-//     let mac = encrypt_then_mac(&PUBLIC_CHANNEL_KEY, &plaintext, &mut ciphertext)?;
-
-//     let mut payload: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-//     GroupTextEnvelope::encode(channel_hash(&PUBLIC_CHANNEL_KEY), mac, &ciphertext, &mut payload)?;
-
-//     // Flood, not Direct — GRP_TXT is a broadcast channel message, not a
-//     // point-to-point reply, so there's no reverse path to send it down.
-//     // Text message requests would follow same structure but differ here,
-//     // needing direct RouteType.
-//     let pkt = Packet::originate(RouteType::Flood, PayloadType::GroupText, &payload)?;
-
-//     let mut buf = [0u8; MAX_PACKET_LEN];
-//     let len = pkt.encode(&mut buf)?;
-//     let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
-//     frame.extend_from_slice(&buf[..len]).map_err(|_| EncodeError::PayloadTooLong)?;
-
-//     if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
-//         warn!("tx queue full, dropping GRP_TXT sensor data");
-//         // return Err(EncodeError::PayloadTooLong);
-//     }
-//     Ok(())
-// }
 
 fn send_group_text(text: &str) -> Result<(), EncodeError> {
     let timestamp: u32 = get_current_timestamp();
@@ -532,32 +477,31 @@ fn send_group_text(text: &str) -> Result<(), EncodeError> {
     let mut frame: heapless::Vec<u8, { MAX_PACKET_LEN + 1 }> = heapless::Vec::new();
     frame.extend_from_slice(&buf[..len]).map_err(|_| EncodeError::PayloadTooLong)?;
 
-    if crate::MESHCORE_TX_BUFF.try_send(frame).is_err() {
+    if MESHCORE_TX_BUFF.try_send(frame).is_err() {
         warn!("tx queue full, dropping GRP_TXT message");
     }
     Ok(())
 }
 
 // Send all sensor data to public channel.
-pub fn send_group_text_sensor_data() -> Result<(), EncodeError> {
-    let r = get_latest_readings();
-    let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
+pub fn send_group_text_sensor_data(r: &SensorReadings) -> Result<(), EncodeError> {
+    // let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
+    let json = Packet::encode_payload(&r)?;
     let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json).map_err(|_| EncodeError::PayloadTooLong)?;
     send_group_text(&response_text)
 }
 
 // Send specific sensor data to public channel.
-pub fn send_group_text_single_sensor(key: RequestKey) -> Result<(), EncodeError> {
-    let r = get_latest_readings();
+pub fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<(), EncodeError> {
     let mut json: heapless::String<64> = heapless::String::new();
     match key {
         RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
-        RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
         RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
         RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
         RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
-        RequestKey::DataAll => return send_group_text_sensor_data(),
+        RequestKey::DataAll => return send_group_text_sensor_data(&r),
     }.map_err(|_| EncodeError::PayloadTooLong)?;
 
     let mut response_text: heapless::String<96> = heapless::String::new();
@@ -587,6 +531,159 @@ pub fn sync_clock_from_received(received_timestamp: u32) {
         info!("clock synced from received packet, new offset = {}", candidate_offset);
     }
 }
+
+/// Process incoming frame data, react according to packet content.
+pub async fn frame_handler(
+    raw_frame_data: &[u8],
+    // wss: &mut WindSpeedSensor,
+//     wds: &mut WindDirectionSensor,
+    aqs: &mut GasSensor<I2cShared>,
+    adc: &mut AdcSensors,
+    tbs: &mut RainfallSensor<I2cShared>,
+) {
+    match Packet::decode(raw_frame_data) {
+        Ok(pkt) => {
+            // Log received packet info
+            info!(
+                "MeshCore packet: route={:?} type={:?} hops={} payload_len={}",
+                defmt::Debug2Format(&pkt.route_type),
+                defmt::Debug2Format(&pkt.payload_type),
+                pkt.path.len(),
+                pkt.payload.len(),
+            );
+            // Debugging specific info  
+            // info!("raw payload bytes: {:02x}", pkt.payload); // defmt can format &[u8] as hex directly
+            
+            // Determine action based on rx payload type 
+            match pkt.payload_type {
+                PayloadType::Request => {
+                    info!("Recieved Request packet; packet ignored.");
+                    // Possible extension to move away from RawCustom reliance.
+                    // Extension may be better suited to using GroupText for 
+                    // both requests and responses
+                }  
+                PayloadType::Response => {
+                    info!("Recieved Response packet; packet ignored.");
+                }
+                PayloadType::TextMessage => {
+                    info!("Recieved TextMessage packet; packet ignored.");
+                    // Feed into decryption func if extended to direct message 
+                }
+                PayloadType::Ack => {
+                    info!("Recieved Ack packet; packet ignored.");
+                }
+                // The clock update based on adverts could potentially be abused
+                // by malicious advert packets being injected into the network.
+                // It is therefore a security risk, but a low one. 
+                PayloadType::Advert => match Advert::decode(pkt.payload){
+                    Ok(adv) => {
+                        sync_clock_from_received(adv.timestamp);
+                        info!("Advert received from node with public key: {:?}, advert info dropped.", adv.public_key);
+                    }
+                    Err(e) => {
+                        error!("Advert decode failed: {:?} - timestamp not updated.", defmt::Debug2Format(&e))
+                    }
+                }
+                PayloadType::GroupText => match GroupTextEnvelope::decode(pkt.payload) {
+                    Ok(env) if env.channel_hash == channel_hash(&PUBLIC_CHANNEL_KEY) => {
+                        let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
+                        match mac_then_decrypt(&PUBLIC_CHANNEL_KEY, env.mac, env.ciphertext, &mut plaintext) {
+                            Ok(()) => {
+                                if plaintext.len() >= 4 {
+                                    let received_ts = u32::from_le_bytes([plaintext[0], plaintext[1], plaintext[2], plaintext[3]]);
+                                    sync_clock_from_received(received_ts);
+                                }
+                                match RequestKey::parse(&plaintext) {
+                                    Some(RequestKey::DataAll) => {
+                                        info!("GRP_TXT DATA request recognised — building response");
+                                        let r = poll_all(aqs, adc, tbs).await;
+                                        if let Err(e) = send_group_text_sensor_data(&r) {
+                                            warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
+                                        }
+                                    }
+                                    Some(key) => {
+                                        info!("GRP_TXT single-sensor request recognised: {:?}", defmt::Debug2Format(&key));
+                                        let r = poll_req(aqs, adc, tbs, key).await;
+                                        if let Err(e) = send_group_text_single_sensor(key, &r) {
+                                            warn!("failed to send GRP_TXT single-sensor response: {:?}", defmt::Debug2Format(&e));
+                                        }
+                                    }
+                                    None => info!("GRP_TXT message not a recognised command; ignored"),
+                                    }
+                            }
+                            Err(e) => warn!("GRP_TXT MAC/decrypt failed: {:?}", defmt::Debug2Format(&e)),
+                        }
+                    }
+                    Ok(env) => info!("GRP_TXT on unknown channel (hash={}); ignored", env.channel_hash),
+                    Err(e) => warn!("failed to parse GroupText envelope: {:?}", defmt::Debug2Format(&e)),
+                }
+                
+                PayloadType::GroupData => {
+                    info!("Recieved GroupData packet; packet ignored.");
+                }
+                PayloadType::AnonRequest => {
+                    info!("Recieved AnonRequest packet; packet ignored.");
+                }
+                PayloadType::Path => {
+                    info!("Recieved Path packet; packet ignored.");
+                }
+                PayloadType::Trace => {
+                    info!("Recieved Trace packet; packet ignored.");
+                }
+                PayloadType::Multipart => {
+                    info!("Recieved Multipart packet; packet ignored.");
+                }
+                PayloadType::Control => {
+                    info!("Recieved Control packet; packet ignored.");
+                    // Possibly used with MQTT MeshCore extension for node health checks 
+                }
+                // Currently unused packet type.
+                PayloadType::RawCustom => {
+                    info!("Recieved RawCustom packet; packet ignored.");
+                    match pkt.payload.split_first() {
+                        Some((&RAW_CUSTOM_REQUEST_TAG, _rest)) => {
+                            info!("received request for all sensor data");
+                            let r = SensorReadings::default();
+                            if let Err(e) = send_sensor_broadcast(&r) {
+                                warn!("failed to send RawCustom sensor data: {:?}", defmt::Debug2Format(&e));
+                            }
+                        }
+                        Some((&RAW_CUSTOM_RESPONSE_TAG, rest)) => {
+                            if let Ok(json_str) = core::str::from_utf8(rest) {
+                                info!("received sensor JSON: {}", json_str);
+                            } else {
+                                warn!("sensor-data RawCustom payload was not valid UTF-8");
+                            }
+                        }
+                        Some((other, _)) => warn!("RawCustom payload with unknown tag: {}", other),
+                        None => warn!("RawCustom payload was empty"),
+                    }
+                }
+            }
+        }
+        Err(e) => warn!("failed to parse packet in frame_handler: {:?}", defmt::Debug2Format(&e)),
+    }
+}
+
+/// Send a frame - MeshCore packet inside LoRa frame - may move to network.rs for clarity
+pub async fn send_frame(
+    radio: &mut SX1262,
+    frame: &[u8],
+){
+    // Ready the radio for transmission with a frame
+    if let Err(e) = radio.lora_radio.prepare_for_tx(&radio.mod_params, &mut radio.tx_pkt_params, TX_POWER_DBM, frame)
+    .await {
+        warn!("prepare_for_tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
+        return;
+    }
+    // Attempt transmission
+    if let Err(e) = radio.lora_radio.tx().await {
+        warn!("tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
+    } else {
+        info!("TX successful, {} bytes sent", frame.len())
+    }
+}
+
 
 //----All HMAC/AES payload encrypting down--------------------------------------
 
@@ -701,3 +798,100 @@ pub fn mac_then_decrypt(
     aes128_ecb_decrypt(key, ciphertext, plaintext_out)
 }
 
+//----Sensor polling integration functions--------------------------------------
+
+// DRAFT FUNCTION FOR POLLING ALL SENSORS TO BE USED IN BROADCAST AND 
+// DATA - DataAll BRANCH OF FRAME_HANDLER
+pub async fn poll_all(
+    // wss: &mut WindSpeedSensor,
+    // wds: &mut WindDirectionSensor,
+    aqs: &mut GasSensor<I2cShared>,
+    adc: &mut AdcSensors,
+    tbs: &mut RainfallSensor<I2cShared>,
+) -> SensorReadings {
+    let wss_data = poll_wss(adc).await;
+    // let wds_data = poll_wds(wds).await;
+    let aqs_data = poll_aqs(aqs).await;
+    let sms_data = poll_sms(adc).await;
+    let tbs_data = poll_tbs(tbs).await;
+
+    SensorReadings { wss:wss_data, aqs:aqs_data, sms:sms_data, tbs:tbs_data }
+}
+
+// Poll the requested functions 
+pub async fn poll_req(
+    // wss: &mut WindSpeedSensor,
+    // wds: &mut WindDirectionSensor,
+    aqs: &mut GasSensor<I2cShared>,
+    adc: &mut AdcSensors,
+    tbs: &mut RainfallSensor<I2cShared>,
+    key: RequestKey,
+) -> SensorReadings {
+
+    match key {
+        RequestKey::Wss => {
+            let wss_data = poll_wss(adc).await;
+            return SensorReadings { wss:wss_data, aqs:(0.0,0.0,0.0,0), sms:0.0, tbs:0.0 }
+            //return SensorReadings { wss:wss_data, aqs:None, sms:None, tbs:None }
+        }
+        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        RequestKey::Aqs => {
+            let aqs_data = poll_aqs(aqs).await;
+            return SensorReadings { wss:0.0, aqs:aqs_data, sms:0.0, tbs:0.0 }
+            //  return SensorReadings { wss:None, aqs:aqs_data, sms:None, tbs:None }
+        }
+        RequestKey::Sms => {
+            let sms_data = poll_sms(adc).await;
+            return SensorReadings { wss:0.0, aqs:(0.0,0.0,0.0,0), sms:sms_data, tbs:0.0 }
+            //return SensorReadings { wss:None, aqs:None, sms:sms_data, tbs:None }
+        } 
+        RequestKey::Tbs => {
+            let tbs_data = poll_tbs(tbs).await;
+            return SensorReadings { wss:0.0, aqs:(0.0,0.0,0.0,0), sms:0.0, tbs:tbs_data }
+            // return SensorReadings { wss:None, aqs:None, sms:None, tbs:tbs_data }
+        }
+        RequestKey::DataAll => {
+            let r = poll_all(aqs, adc, tbs).await;
+            return r
+        }
+    }
+}
+
+// THIS SET OF SINGLE SENSOR POLLING FUNCTIONS MAY BE BETTER SUITED TO RETURN
+// PARTIALLY FILLED SENSORREADINGS STRUCT 
+pub async fn poll_wss(adc: &mut AdcSensors) -> f32 { //i16
+    let r = adc.get_soil_moisture().await;
+    return r
+}
+// pub async fn poll_wds(/* wind direction sensor handle */) -> u16 { 
+//     // wds.get_wind_direction().await.unwrap()
+// }
+pub async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Option<f64>, Option<f64>, Option<f64>, Option<u8>
+    match aqs.get_measurements().await{
+        Ok(r) => {
+            info!("Polled aqs; aqs_tmp:{}, aqs_hum:{}, aqs_prs:{}, aqs_aqi:{}", r.0, r.1, r.2, r.3);
+            r
+        }
+        Err(e) => { 
+            error!("Error polling gas sensor: {}.", defmt::Debug2Format(&e));
+            (0.0, 0.0, 0.0, 0) // (None, None, None, None)
+        }
+    }
+}
+pub async fn poll_sms(adc: &mut AdcSensors) -> f32 { //i16
+    let r = adc.get_soil_moisture().await;
+    info!("Polled sms: {}",r);
+    return r
+}
+pub async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> f64 { //Option<f64>
+    match tbs.get_rainfall().await{
+        Ok(r) => { 
+            info!("Polled tbs:{}", r);
+            r
+        }
+        Err(e) => { 
+            error!("Error polling rainfall sensor: {}.", defmt::Debug2Format(&e));
+            0.0 // None
+        }
+    }
+}

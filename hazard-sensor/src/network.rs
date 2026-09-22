@@ -52,6 +52,14 @@ pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need 
 const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
 const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1; 
 
+// Battery level check - related constants 
+// const PIN_VBAT: u8 = 0;        NEED TO BE p.AIN3 ?                 // Represents analog pin A0/0 depending on your BSP
+const VBAT_MV_PER_LSB: f32 = 0.73242188_f32;    // 3.0V ADC range / 12-bit resolution
+const VBAT_DIVIDER: f32 = 0.4_f32;              // Resistor divider ratio
+const VBAT_DIVIDER_COMP: f32 = 1.73_f32;        // Empirical compensation factor
+// Combined scaling factor
+const REAL_VBAT_MV_PER_LSB: f32 = VBAT_DIVIDER_COMP * VBAT_MV_PER_LSB;
+
 
 //======================================================================================================================
 //----MeshCore protcol level firmware-----------------------------------------------------------------------------------
@@ -824,8 +832,10 @@ fn mac_then_decrypt(
 
 
 //======================================================================================================================
-//----Sensor polling functions------------------------------------------------------------------------------------------
+//----Telemetry functions-----------------------------------------------------------------------------------------------
 //======================================================================================================================
+
+// NOTE: The cascading await functions arising from using so many getters could be poor implementation, to be discussed
 
 /// Calls all sensor poll functions to return readings to DATA requests and broadcasts.
 // NOTE: If wds is added back into scope it will be part of the AdcSensors object.
@@ -918,4 +928,13 @@ async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> f64 { //Option<f64>
             0.0 // None
         }
     }
+}
+
+
+/// Reads the battery voltage and returns the value in millivolts.
+async fn read_vbat(adc: &mut AdcSensors) -> f32 {
+    let raw_v = adc.get_battery_voltage().await;
+    let scaled_v = raw_v * REAL_VBAT_MV_PER_LSB;
+    info!("Read battery, voltage at: {}", scaled_v);
+    return scaled_v
 }

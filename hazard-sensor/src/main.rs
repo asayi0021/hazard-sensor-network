@@ -53,7 +53,7 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 /// already guarantees every call returns a distinct, increasing value but may 
 /// fall outside the acceptable time window.
 pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
-pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);    
+pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);  
 
 /// Gas sensor I2C slave address
 const GAS_SENSOR_ADDR: u8 = 0x77;
@@ -79,6 +79,7 @@ impl NRF52840 {
         saadc: Peri<'static, peripherals::SAADC>,
         adc_channel0: Peri<'static, peripherals::P0_31>, 
         adc_channel1: Peri<'static, peripherals::P0_03>,
+        // adc_channel2: Peri<'static, peripherals::P0_03>,
     ) -> Self { 
         // Initialise config for each bus
         let i2c_config1 = twim::Config::default();
@@ -88,6 +89,7 @@ impl NRF52840 {
         // Initialise saadc channels
         let channel0 = ChannelConfig::single_ended(adc_channel0);
         let channel1 = ChannelConfig::single_ended(adc_channel1); 
+        // let channel2 = ChannelConfig::single_ended(adc_channel2); 
 
         // Initialize the i2c drivers
         let i2c1 = twim::Twim::new(twispi0, Irqs, sda1, scl1, i2c_config1, TX_BUFF1.take()); 
@@ -95,6 +97,7 @@ impl NRF52840 {
 
         // Intitialise saadc
         let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
+        // let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1, channel2]);
 
         NRF52840 {
             i2c1,
@@ -221,6 +224,7 @@ async fn main(_spawner: Spawner) {
     let saadc = p.SAADC;
     let adc_channel0 = p.P0_31;
     let adc_channel1 = p.P0_03; 
+    // let adc_channel2 = p.P0_03; pin is AIN3, need to map to RAK4630 pin
 
     // SX1262 pin definitions to pass to constructor
     let reset = p.P1_06;
@@ -237,6 +241,7 @@ async fn main(_spawner: Spawner) {
 
     // Initialisation of RAK4630 objects
     let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1);
+    // let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1,adc_channel2);
     let radio = SX1262::new(reset, busy, dio1, rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
 
     // Initialisation of shared I2C bus

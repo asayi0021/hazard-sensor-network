@@ -11,6 +11,7 @@ use num_traits::float::FloatCore;
 // SEN0193 Capacitive Soil Moisture Sensor
 pub struct AdcSensors {
     saadc: Saadc<'static, 2>,
+    // saadc: Saadc<'static, 3>,
 }
 
 pub enum SensorError {
@@ -19,18 +20,19 @@ pub enum SensorError {
 
 pub const SOIL_MOISTURE_CHANNEL: usize = 0; //Confirm ADC wiring
 pub const WIND_SPEED_CHANNEL: usize = 1; //Confirm ADC wiring
+// pub const V_BAT_CHANNEL: usize = 2; // Add back in for v_bat implementation
 pub const SOIL_LOWER_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
 pub const SOIL_UPPER_BOUND: f32 = 1610.0f32; //Place value here after sensor is calibrated
 pub const SOIL_RANGE: f32 = SOIL_LOWER_BOUND - SOIL_UPPER_BOUND;
 
 impl AdcSensors {
-    pub fn new(saadc: Saadc<'static, 2>, // confirm actual RAK4631 mapping
+    pub fn new(saadc: Saadc<'static, 2>, // pub fn new(saadc: Saadc<'static, 3>,
     ) -> Self {
         Self { saadc }
     }
 
     pub async fn get_soil_moisture(&mut self) -> f32 {
-        let mut buf = [0i16; 2];
+        let mut buf = [0i16; 2]; //let mut buf = [0i16; 3];
         self.saadc.sample(&mut buf).await;
         let raw = buf[SOIL_MOISTURE_CHANNEL];
         100f32 - (((raw as f32 - SOIL_UPPER_BOUND) / SOIL_RANGE) * 100f32)
@@ -39,10 +41,18 @@ impl AdcSensors {
     //Implemented the logic of ReadWindSpeed from the environment.ts file found in the pxt-iot-environment-kit
 
     pub async fn get_wind_speed(&mut self) -> f32 {
-        let mut buf = [0i16; 2];
+        let mut buf = [0i16; 2]; //let mut buf = [0i16; 3];
         self.saadc.sample(&mut buf).await;
         let raw = buf[WIND_SPEED_CHANNEL];
         ((((raw as f32) / 1023f32) * 3100f32) / 40f32).round()
+    }
+
+    pub async fn get_battery_voltage(&mut self) -> f32 {
+        // let mut buf = [0i16; 3];
+        // self.saadc.sample(&mut buf).await;
+        // let raw = buf[V_BAT_CHANNEL];
+        // return raw
+        todo!()
     }
 
     // export function ReadWindSpeed(windspeedpin: AnalogPin): number {

@@ -1,17 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor\Cargo.toml
 workspace: C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\Cargo.toml
-   0.197138300s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `typenum` is newer than we are 13434522829.715275700s > 13434522825.697067800s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hybrid-array-0.4.14"
-   0.198011500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `cpufeatures` is newer than we are 13434522820.468899000s > 13434522819.552934500s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aes-0.9.3"
-   0.214722500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `futures_core` is newer than we are 13434522824.907672400s > 13434522822.210187800s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-sync-0.8.0"
-   0.215712700s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `build_script_build` is newer than we are 13434523252.943031800s > 13434522822.399176900s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-driver-0.2.2"
-   0.216382300s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `heapless` is newer than we are 13434522845.710828700s > 13434522822.411174300s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-queue-utils-0.3.2"
-   0.216479700s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `defmt_03` is newer than we are 13434522858.309552500s > 13434522822.476171300s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-1.0.0"
-   0.217076600s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `futures_core` is newer than we are 13434522824.907672400s > 13434522822.386183000s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-0.5.1"
-   0.224374400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `typenum` is newer than we are 13434522829.715275700s > 13434522822.766167900s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fixed-1.31.0"
-   0.228557200s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `num_traits` is newer than we are 13434522826.088028300s > 13434522825.785074100s "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\lora-phy-3.0.1"
-   0.230669600s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.230747100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-9f21ebba89d6ac29\bin-hazard-sensor`
+   0.181249400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.181345900s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-9f21ebba89d6ac29\bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -38,18 +29,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.267954400s  INFO prepare_target{force=false package_id=aes v0.9.3 target="aes"}: cargo::core::compiler::fingerprint: fingerprint dirty for aes v0.9.3/Check { test: false }/TargetInner { ..: lib_target("aes", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\aes-0.9.3\\src\\lib.rs", Edition2024) }
-   0.268039000s  INFO prepare_target{force=false package_id=aes v0.9.3 target="aes"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(23), dep_mtime: FileTime { seconds: 13434522820, nanos: 468899000 }, max_mtime: FileTime { seconds: 13434522819, nanos: 552934500 } })
-   0.293797600s  INFO prepare_target{force=false package_id=cipher v0.5.2 target="cipher"}: cargo::core::compiler::fingerprint: fingerprint dirty for cipher v0.5.2/Check { test: false }/TargetInner { ..: lib_target("cipher", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cipher-0.5.2\\src\\lib.rs", Edition2024) }
-   0.293872000s  INFO prepare_target{force=false package_id=cipher v0.5.2 target="cipher"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(25) })
-   0.321370500s  INFO prepare_target{force=false package_id=crypto-common v0.2.2 target="crypto_common"}: cargo::core::compiler::fingerprint: fingerprint dirty for crypto-common v0.2.2/Check { test: false }/TargetInner { ..: lib_target("crypto_common", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\crypto-common-0.2.2\\src\\lib.rs", Edition2024) }
-   0.321448100s  INFO prepare_target{force=false package_id=crypto-common v0.2.2 target="crypto_common"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(98) })
-   0.351078300s  INFO prepare_target{force=false package_id=hybrid-array v0.4.14 target="hybrid_array"}: cargo::core::compiler::fingerprint: fingerprint dirty for hybrid-array v0.4.14/Check { test: false }/TargetInner { ..: lib_target("hybrid_array", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hybrid-array-0.4.14\\src\\lib.rs", Edition2024) }
-   0.351143800s  INFO prepare_target{force=false package_id=hybrid-array v0.4.14 target="hybrid_array"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(141), dep_mtime: FileTime { seconds: 13434522829, nanos: 715275700 }, max_mtime: FileTime { seconds: 13434522825, nanos: 697067800 } })
-   0.377211000s  INFO prepare_target{force=false package_id=inout v0.2.2 target="inout"}: cargo::core::compiler::fingerprint: fingerprint dirty for inout v0.2.2/Check { test: false }/TargetInner { ..: lib_target("inout", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\inout-0.2.2\\src\\lib.rs", Edition2024) }
-   0.377301900s  INFO prepare_target{force=false package_id=inout v0.2.2 target="inout"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(98) })
-   0.392207000s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
-   0.392247300s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\cortex-m-1afbf0e18c612807\lib-cortex_m`
+   0.197769800s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
+   0.197823200s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\cortex-m-1afbf0e18c612807\lib-cortex_m`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -77,22 +58,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.441401200s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-embedded-hal v0.6.0/Check { test: false }/TargetInner { ..: lib_target("embassy_embedded_hal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-embedded-hal-0.6.0\\src\\lib.rs", Edition2024) }
-   0.441490500s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(57) })
-   0.473155100s  INFO prepare_target{force=false package_id=embassy-sync v0.8.0 target="embassy_sync"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-sync v0.8.0/Check { test: false }/TargetInner { ..: lib_target("embassy_sync", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-sync-0.8.0\\src\\lib.rs", Edition2024) }
-   0.473207400s  INFO prepare_target{force=false package_id=embassy-sync v0.8.0 target="embassy_sync"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(86), dep_mtime: FileTime { seconds: 13434522824, nanos: 907672400 }, max_mtime: FileTime { seconds: 13434522822, nanos: 210187800 } })
-   0.517945500s  INFO prepare_target{force=false package_id=embassy-time v0.5.1 target="embassy_time"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-time v0.5.1/Check { test: false }/TargetInner { ..: lib_target("embassy_time", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-0.5.1\\src\\lib.rs", Edition2024) }
-   0.518002600s  INFO prepare_target{force=false package_id=embassy-time v0.5.1 target="embassy_time"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(86), dep_mtime: FileTime { seconds: 13434522824, nanos: 907672400 }, max_mtime: FileTime { seconds: 13434522822, nanos: 386183000 } })
-   0.532940900s  INFO prepare_target{force=false package_id=embassy-time-driver v0.2.2 target="embassy_time_driver"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-time-driver v0.2.2/Check { test: false }/TargetInner { ..: lib_target("embassy_time_driver", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-driver-0.2.2\\src\\lib.rs", Edition2024) }
-   0.532992900s  INFO prepare_target{force=false package_id=embassy-time-driver v0.2.2 target="embassy_time_driver"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(63), dep_mtime: FileTime { seconds: 13434523252, nanos: 943031800 }, max_mtime: FileTime { seconds: 13434522822, nanos: 399176900 } })
-   0.554920600s  INFO prepare_target{force=false package_id=embassy-time-queue-utils v0.3.2 target="embassy_time_queue_utils"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-time-queue-utils v0.3.2/Check { test: false }/TargetInner { ..: lib_target("embassy_time_queue_utils", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-queue-utils-0.3.2\\src\\lib.rs", Edition2024) }
-   0.554974400s  INFO prepare_target{force=false package_id=embassy-time-queue-utils v0.3.2 target="embassy_time_queue_utils"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(94), dep_mtime: FileTime { seconds: 13434522845, nanos: 710828700 }, max_mtime: FileTime { seconds: 13434522822, nanos: 411174300 } })
-   0.581367700s  INFO prepare_target{force=false package_id=embedded-hal v1.0.0 target="embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal v1.0.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("embedded_hal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-1.0.0\\src\\lib.rs", Edition2021) }
-   0.581429500s  INFO prepare_target{force=false package_id=embedded-hal v1.0.0 target="embedded_hal"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(30), dep_mtime: FileTime { seconds: 13434522858, nanos: 309552500 }, max_mtime: FileTime { seconds: 13434522822, nanos: 476171300 } })
-   0.603951600s  INFO prepare_target{force=false package_id=embedded-hal-async v1.0.0 target="embedded_hal_async"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal-async v1.0.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("embedded_hal_async", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-async-1.0.0\\src\\lib.rs", Edition2021) }
-   0.604001400s  INFO prepare_target{force=false package_id=embedded-hal-async v1.0.0 target="embedded_hal_async"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(69) })
-   0.607942600s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
-   0.607985300s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-24b56c2915dd6ea3\lib-embassy_executor`
+   0.233940000s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
+   0.233974500s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-24b56c2915dd6ea3\lib-embassy_executor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -120,8 +87,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.615078200s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
-   0.615128600s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-8c4e4403252734d1\lib-embassy_nrf`
+   0.238438700s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
+   0.238483700s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-8c4e4403252734d1\lib-embassy_nrf`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -149,8 +116,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.616627100s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
-   0.616656100s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-73f23e81fb8ba5da\lib-embassy_hal_internal`
+   0.239860800s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
+   0.239894200s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-73f23e81fb8ba5da\lib-embassy_hal_internal`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -179,10 +146,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   0.648440500s  INFO prepare_target{force=false package_id=fixed v1.31.0 target="fixed"}: cargo::core::compiler::fingerprint: fingerprint dirty for fixed v1.31.0/Check { test: false }/TargetInner { ..: lib_target("fixed", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\fixed-1.31.0\\src\\lib.rs", Edition2024) }
-   0.648549600s  INFO prepare_target{force=false package_id=fixed v1.31.0 target="fixed"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(141), dep_mtime: FileTime { seconds: 13434522829, nanos: 715275700 }, max_mtime: FileTime { seconds: 13434522822, nanos: 766167900 } })
-   0.656783000s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
-   0.656822400s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-dd211363c7ee3ed2\lib-nrf_pac`
+   0.248606600s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
+   0.248641900s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-dd211363c7ee3ed2\lib-nrf_pac`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -211,18 +176,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   0.684259200s  INFO prepare_target{force=false package_id=embedded-hal-bus v0.3.0 target="embedded_hal_bus"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal-bus v0.3.0/Check { test: false }/TargetInner { ..: lib_target("embedded_hal_bus", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-bus-0.3.0\\src\\lib.rs", Edition2021) }
-   0.684334300s  INFO prepare_target{force=false package_id=embedded-hal-bus v0.3.0 target="embedded_hal_bus"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(69) })
-   0.718988500s  INFO prepare_target{force=false package_id=hmac v0.13.0 target="hmac"}: cargo::core::compiler::fingerprint: fingerprint dirty for hmac v0.13.0/Check { test: false }/TargetInner { ..: lib_target("hmac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\hmac-0.13.0\\src\\lib.rs", Edition2024) }
-   0.719066500s  INFO prepare_target{force=false package_id=hmac v0.13.0 target="hmac"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(41) })
-   0.736573100s  INFO prepare_target{force=false package_id=digest v0.11.3 target="digest"}: cargo::core::compiler::fingerprint: fingerprint dirty for digest v0.11.3/Check { test: false }/TargetInner { ..: lib_target("digest", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\digest-0.11.3\\src\\lib.rs", Edition2024) }
-   0.736652400s  INFO prepare_target{force=false package_id=digest v0.11.3 target="digest"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(25) })
-   0.757252900s  INFO prepare_target{force=false package_id=block-buffer v0.12.1 target="block_buffer"}: cargo::core::compiler::fingerprint: fingerprint dirty for block-buffer v0.12.1/Check { test: false }/TargetInner { ..: lib_target("block_buffer", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\block-buffer-0.12.1\\src\\lib.rs", Edition2024) }
-   0.757330500s  INFO prepare_target{force=false package_id=block-buffer v0.12.1 target="block_buffer"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(98) })
-   0.821059800s  INFO prepare_target{force=false package_id=lora-phy v3.0.1 target="lora_phy"}: cargo::core::compiler::fingerprint: fingerprint dirty for lora-phy v3.0.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("lora_phy", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\lora-phy-3.0.1\\src\\lib.rs", Edition2021) }
-   0.821136300s  INFO prepare_target{force=false package_id=lora-phy v3.0.1 target="lora_phy"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(109), dep_mtime: FileTime { seconds: 13434522826, nanos: 88028300 }, max_mtime: FileTime { seconds: 13434522825, nanos: 785074100 } })
-   0.837903200s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
-   0.837968500s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\panic-probe-f74289351d34705b\lib-panic_probe`
+   0.254947300s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
+   0.254981700s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\panic-probe-f74289351d34705b\lib-panic_probe`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -250,10 +205,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   0.859273100s  INFO prepare_target{force=false package_id=sha2 v0.11.0 target="sha2"}: cargo::core::compiler::fingerprint: fingerprint dirty for sha2 v0.11.0/Check { test: false }/TargetInner { ..: lib_target("sha2", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\sha2-0.11.0\\src\\lib.rs", Edition2024) }
-   0.859369700s  INFO prepare_target{force=false package_id=sha2 v0.11.0 target="sha2"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(41) })
-   0.867704700s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.867767100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-e646f307f513d68a\test-bin-hazard-sensor`
+   0.260142100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.260185500s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-e646f307f513d68a\test-bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -280,55 +233,5 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   0.869196700s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
-   0.869242200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\repeater-ea5a0be14f99cae7\bin-repeater`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-    Checking hybrid-array v0.4.14
     Checking cortex-m v0.7.7
-    Checking embassy-time-driver v0.2.2
-    Checking embassy-time-queue-utils v0.3.2
-    Checking embassy-sync v0.8.0
-    Checking embedded-hal v1.0.0
-    Checking fixed v1.31.0
-    Checking repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater)
-error: could not compile `repeater` (bin "repeater") due to 2 previous errors
-warning: build failed, waiting for other jobs to finish...
 error: could not compile `cortex-m` (lib) due to 6 previous errors
-    Checking embedded-hal-async v1.0.0
-    Checking embassy-time v0.5.1
-    Checking lora-phy v3.0.1
-    Checking embedded-hal-bus v0.3.0
-    Checking crypto-common v0.2.2
-    Checking block-buffer v0.12.1
-    Checking inout v0.2.2
-    Checking embassy-embedded-hal v0.6.0
-    Checking digest v0.11.3
-    Checking cipher v0.5.2
-    Checking hmac v0.13.0
-    Checking sha2 v0.11.0
-    Checking aes v0.9.3

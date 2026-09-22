@@ -4,12 +4,10 @@
 // Module declaration
 mod sensors;
 mod network;
-mod network_testing;
 
 // Imports from other modules
 use crate::network::{frame_handler, send_frame, poll_all, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM};
 use crate::sensors::{watchdog::{WatchdogTimer, WatchdogWindow},gas_sensor::GasSensor,adc_sensors::AdcSensors,tipping_bucket::{RainfallSensor,RAINFALL_SENSOR_ADDR}}; //
-
 
 // Embassy imports
 use embassy_futures::select::{select3, Either3}; 
@@ -199,6 +197,10 @@ impl SX1262 {
     }
 }
 
+//======================================================================================================================
+//----Main task---------------------------------------------------------------------------------------------------------
+//======================================================================================================================
+
 /// Main - initialises transceiver and peripherals, then spawns the radio_task.
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
@@ -207,7 +209,7 @@ async fn main(_spawner: Spawner) {
     // Initialisation of peripherals struct p 
     let p = embassy_nrf::init(Default::default());
 
-        // nRF52 pin definitions to pass to constructor
+        // nRF52 pin definitions to pass to constructors
     // i2c pins
     let twispi0 = p.TWISPI0;
     let twispi1 = p.TWISPI1;
@@ -233,12 +235,6 @@ async fn main(_spawner: Spawner) {
     let mosi = p.P1_12;
     let nss = p.P1_10;
 
-    // gpio pins for MIKROE-4416 (watchdog)
-    // let io1 = Output::new(p.P0_17, Level::Low, OutputDrive::Standard); //wdi
-    // let io2: Output<'_> = Output::new(p.P1_02, Level::High, OutputDrive::Standard); //s0
-    // NOTE: io2 is stated as a controlling pin for the 3V3_S supply voltage rail, it seems that this rail is seperate
-    // from the 3V3 VDD pin on the J-headers and only matters for the sensor slots but this may be an error point.
-
     // Initialisation of RAK4630 objects
     let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1);
     let radio = SX1262::new(reset, busy, dio1, rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
@@ -246,16 +242,14 @@ async fn main(_spawner: Spawner) {
     // Initialisation of shared I2C bus
     let i2c_bus = Mutex::new(mcu.i2c1);
     let i2c_bus = I2C_BUS.init(i2c_bus);
-
     // Create seperate objects to pass to constructors for shared I2C bus 
     let gas_i2c = I2cDevice::new(i2c_bus);
     let rain_i2c = I2cDevice::new(i2c_bus);
 
-        // Initialisation of sensor objects
-    // ADC sensors - soil moisture (sms) and wind speed (wss)
+    // ADC sensors init - soil moisture (sms) and wind speed (wss)
     let adc = AdcSensors::new(mcu.saadc);           
 
-    // Gas sensor
+    // Gas sensor initialisation
     let mut aqs = match GasSensor::new(gas_i2c, GAS_SENSOR_ADDR).await { // currently on same i2c bus as tbs
         Ok(sensor) => {
             info!("GAS SENSOR initialised.");
@@ -268,7 +262,7 @@ async fn main(_spawner: Spawner) {
         Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
     };
 
-    // Tipping bucket (rainfall) sensor
+    // Tipping bucket (rainfall) sensor initialisation
     let mut tbs =
         match RainfallSensor::new(rain_i2c, RAINFALL_SENSOR_ADDR).await {
             Ok(sensor) => {
@@ -287,7 +281,9 @@ async fn main(_spawner: Spawner) {
 }
 
 
-//----MeshCore network related firmware down------------------------------------
+//======================================================================================================================
+//----Network (MeshCore) related firmware down--------------------------------------------------------------------------
+//======================================================================================================================
 
 /// radio_task drains the MESHCORE_TX_BUFF when it is not empty, and calls 
 /// frame_handler when anything is recieved by the transceiver. Now handles 
@@ -344,7 +340,9 @@ async fn radio_task(
 }
 
 
-//----Watchdog related firmware------------------------------------------------
+//======================================================================================================================
+//----Watchdog related firmware-----------------------------------------------------------------------------------------
+//======================================================================================================================
 
 // Watchdog task replies to initial pulse within the window, then disables the
 // the watchdog until a reset (loss of power)
@@ -360,30 +358,27 @@ async fn radio_task(
 //     }
 // }
 
-// et mut watchdog = WatchdogTimer::new(io1, io2).unwrap();
-
-//     // 4. Disable again — takes effect immediately regardless of timing
+    // OUT OF MAIN
+// gpio pins for MIKROE-4416 (watchdog)
+// let io1 = Output::new(p.P0_17, Level::Low, OutputDrive::Standard); //wdi
+// let io2: Output<'_> = Output::new(p.P1_02, Level::High, OutputDrive::Standard); //s0
+// NOTE: io2 is stated as a controlling pin for the 3V3_S supply voltage rail, it seems that this rail is seperate
+// from the 3V3 VDD pin on the J-headers and only matters for the sensor slots but this may be an error point.
+// let mut watchdog = WatchdogTimer::new(io1, io2).unwrap();
 //     watchdog.set_window(WatchdogWindow::Disabled).unwrap();
 //     info!("Watchdog disabled");
-
 //     info!("RESESTABLISH RST LINK");
-
 //     Timer::after_secs(5).await;
-
 //     info!("Test 1");
-
 //     // Configure watchdog
 //     watchdog.set_window(WatchdogWindow::Ratio1To8).unwrap(); 
 //     info!("Set the watchdog window");
-
-//     // 2. Wait out t_WD-setup with margin before WDI is recognized
+//     // Wait out t_WD-setup with margin before WDI is recognized
 //     Timer::after_micros(500).await;
 //     info!("Waiting for watchdog setup time and for window");
-
-//     // 3. Send the mandatory first pulse, well inside tWDU(min) = 92.7 ms
+//     Send the mandatory first pulse, well inside tWDU(min) = 92.7 ms
 //     watchdog.send_pulse().await.unwrap();
 //     info!("Watchdog WDI pulse sent");
-
 //     watchdog.set_window(WatchdogWindow::Disabled).unwrap();
 //     info!("Watchdog disabled");
 

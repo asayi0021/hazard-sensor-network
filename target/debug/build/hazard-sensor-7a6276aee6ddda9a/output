@@ -1,5 +1,0 @@
-cargo:rustc-link-search=C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\target\debug\build\hazard-sensor-7a6276aee6ddda9a\out
-cargo:rerun-if-changed=memory.x
-cargo:rustc-link-arg-bins=--nmagic
-cargo:rustc-link-arg-bins=-Tlink.x
-cargo:rustc-link-arg-bins=-Tdefmt.x

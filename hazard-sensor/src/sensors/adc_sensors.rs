@@ -175,13 +175,13 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     }
 
     /// Get wind speed reading from ADC and return wind speed in km/h.
-    pub async fn get_wind_speed(&mut self) -> Result<u32, SensorError> {
+    pub async fn get_wind_speed(&mut self) -> Result<f32, SensorError> {
         // Get voltage reading from ADC
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::WindSpeed).await?;
 
         // Convert mV to km/h
-        let speed = (voltage_mv * 200) / 2000;
-        Ok(speed)
+        let wind_speed_kmh = (voltage_mv as f32 / 2000.0) * 200.0;
+        Ok(wind_speed_kmh)
     }
 
     /// Get battery voltage from ADC and return value in mV.

@@ -423,7 +423,7 @@ impl<'a> Advert<'a> {
 // NOTE: partial instances are only safe with send_group_text_single_sensor, never send_group_text_sensor_data
 #[derive(Clone, Copy, Debug)]
 pub struct SensorReadings {
-    pub wss: Option<u32>,
+    pub wss: Option<f32>,
     // pub wds: Option<f32>,
     pub aqs: Option<(f64, f64, f64, u8)>,
     pub sms: Option<f32>,
@@ -892,7 +892,7 @@ async fn poll_req(
 }
 
 /// Set of sensor specific polling functions that return the raw data values.
-async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> u32 { //i16
+async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> f32 { //i16
     match adc.get_wind_speed().await {
         Ok(r) => {
             info!("Polled wss; windpeed:{}", r);
@@ -900,7 +900,7 @@ async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> u32 { //i16
         }
         Err(e) => {
             error!("Error polling windspeed sensor: {}.", defmt::Debug2Format(&e));
-            return 0
+            return 0.0
         }
     }
 }

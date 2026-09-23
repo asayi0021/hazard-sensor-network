@@ -559,7 +559,7 @@ pub async fn frame_handler(
     raw_frame_data: &[u8],
 //     wds: &mut WindDirectionSensor,
     aqs: &mut GasSensor<I2cShared>,
-    adc: &mut AdcSensors,
+    adc: &mut AdcSensors<I2cShared>,
     tbs: &mut RainfallSensor<I2cShared>,
 ) {
     match Packet::decode(raw_frame_data) {
@@ -841,7 +841,7 @@ fn mac_then_decrypt(
 // NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 pub async fn poll_all(
     aqs: &mut GasSensor<I2cShared>,
-    adc: &mut AdcSensors,
+    adc: &mut AdcSensors<I2cShared>,
     tbs: &mut RainfallSensor<I2cShared>,
 ) -> SensorReadings {
     let wss_data = poll_wss(adc).await;
@@ -858,7 +858,7 @@ pub async fn poll_all(
 // NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 async fn poll_req(
     aqs: &mut GasSensor<I2cShared>,
-    adc: &mut AdcSensors,
+    adc: &mut AdcSensors<I2cShared>,
     tbs: &mut RainfallSensor<I2cShared>,
     key: RequestKey,
 ) -> SensorReadings {
@@ -892,9 +892,17 @@ async fn poll_req(
 }
 
 /// Set of sensor specific polling functions that return the raw data values.
-async fn poll_wss(adc: &mut AdcSensors) -> f32 { //i16
-    let r = adc.get_wind_speed().await;
-    return r
+async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> f32 { //i16
+    match adc.get_wind_speed().await {
+        Ok(r) => {
+            info!("Polled wss; windpeed:{}", r);
+            return r
+        }
+        Err(e) => {
+            error!("Error polling windspeed sensor: {}.", defmt::Debug2Format(&e));
+            return 0.0
+        }
+    }
 }
 // async fn poll_wds(adc: &mut AdcSensors) -> f32 {
 //     let r = adc.get_wind_direction().await;
@@ -912,13 +920,20 @@ async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Op
         }
     }
 }
-async fn poll_sms(adc: &mut AdcSensors) -> f32 {
-    let r = adc.get_soil_moisture().await;
-    info!("Polled sms: {}",r);
-    return r
+async fn poll_sms(adc: &mut AdcSensors<I2cShared>) -> f32 {
+    match adc.get_soil_moisture().await {
+        Ok(r) => {
+            info!("Polled sms; moisture:{}", r);
+            return r
+        }
+        Err(e) => {
+            error!("Error polling soil moisture sensor: {}.", defmt::Debug2Format(&e));
+            return 0.0
+        }
+    }
 }
 async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> f64 { //Option<f64>
-    match tbs.get_rainfall_last_hour().await{
+    match tbs.get_rainfall_last_hour().await {
         Ok(r) => {
             info!("Polled tbs:{}", r);
             r
@@ -932,9 +947,18 @@ async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> f64 { //Option<f64>
 
 
 /// Reads the battery voltage and returns the value in millivolts.
-async fn read_vbat(adc: &mut AdcSensors) -> f32 {
-    let raw_v = adc.get_battery_voltage().await;
-    let scaled_v = raw_v * REAL_VBAT_MV_PER_LSB;
+async fn read_vbat(adc: &mut AdcSensors<I2cShared>) -> f32 {
+    let raw_v = match adc.get_battery_voltage().await {
+        Ok(r) => {
+            info!("Polled tbs:{}", r);
+            r
+        }
+        Err(e) => {
+            error!("Error polling rainfall sensor: {}.", defmt::Debug2Format(&e));
+            0 // None
+        }
+    };
+    let scaled_v = raw_v as f32 * REAL_VBAT_MV_PER_LSB;
     info!("Read battery, voltage at: {}", scaled_v);
     return scaled_v
 }

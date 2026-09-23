@@ -61,6 +61,9 @@ const GAS_SENSOR_ADDR: u8 = 0x77;
 /// Rainfall sensor I2C slave address
 const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
 
+/// ADC to I2C slave address
+const ADC_SENSOR_ADDR: u8 = 0x48;
+
 /// Shortened type for GasSensor and RainfallSensor objects
 pub type I2cShared = I2cDevice<'static, NoopRawMutex, twim::Twim<'static>>;
 
@@ -277,9 +280,16 @@ async fn main(_spawner: Spawner) {
     // Create seperate objects to pass to constructors for shared I2C bus
     let gas_i2c = I2cDevice::new(i2c_bus);
     let rain_i2c = I2cDevice::new(i2c_bus);
+    let adc_i2c = I2cDevice::new(i2c_bus);
 
     // ADC sensors init - soil moisture (sms) and wind speed (wss)
-    let adc = AdcSensors::new(mcu.saadc);
+    let adc = match AdcSensors::new(adc_i2c, ADC_SENSOR_ADDR).await { // currently on same i2c bus as tbs
+        Ok(sensor) => {
+            info!("ADC SENSORS initialised.");
+            sensor
+        },
+        Err(e) => panic!("Could not intialise ADC SENSOR: {:?}", e),
+    };
 
     // Gas sensor initialisation
     let mut aqs = match GasSensor::new(gas_i2c, GAS_SENSOR_ADDR).await { // currently on same i2c bus as tbs
@@ -325,7 +335,7 @@ async fn radio_task(
     mut radio: SX1262,
     // mut wds: WindDirectionSensor,
     mut aqs: GasSensor<I2cShared>,          // It may be worth making a senors struct
-    mut adc: AdcSensors,                    // to centralise the different sensors
+    mut adc: AdcSensors<I2cShared>,         // to centralise the different sensors
     mut tbs: RainfallSensor<I2cShared>,     // for passing between functions/tasks
 ){
     // Initialise recieved packet buffer locally

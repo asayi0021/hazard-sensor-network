@@ -15,7 +15,7 @@ panic-probe = { version = "1.0.0", features = ["print-defmt"] }
 static_cell = "2.1.1"
 async-modbus = { version = "0.6", default-features = false, features = ["embedded-io"] }
 embassy-time = { version = "0.5.1", features = ["defmt", "generic-queue-8"] }
-num-traits = "0.2.19"
+num-traits = { version = "0.2.19", default-features = false }
 
 [profile.dev]
 panic = "abort"

@@ -55,8 +55,8 @@ impl NRF52840 {
         uart_config.baudrate = uarte::Baudrate::Baud9600; //Based on what found in the given library for the sensor
 
         let adc_config = saadc::Config::default();
-        let channel0 = ChannelConfig::single_ended(p.P0_31);
-        let channel1 = ChannelConfig::single_ended(p.P0_03); //Double check pins
+        let channel0 = ChannelConfig::single_ended(p.P0_03);
+        let channel1 = ChannelConfig::single_ended(p.P0_31); //Double check pins
         let saadc = Saadc::new(p.SAADC, Irqs, adc_config, [channel0, channel1]);
 
         // Initialise the TWIM driver
@@ -87,8 +87,8 @@ async fn main(_spawner: Spawner) {
     info!("Hello, world!");
 
     loop {
-        let moisture = adc.get_soil_moisture().await;
-        defmt::info!("Soil Moisture: {}%", moisture);
+        let windspeed = adc.get_wind_speed().await;
+        defmt::info!("Windspeed: {}m/s", windspeed);
         embassy_time::Timer::after_secs(1).await;
     }
 

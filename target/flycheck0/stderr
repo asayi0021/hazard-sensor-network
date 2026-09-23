@@ -1,237 +1,49 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
-package:   C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor\Cargo.toml
-workspace: C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\Cargo.toml
-   0.172905200s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.172974800s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-9f21ebba89d6ac29\bin-hazard-sensor`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-   0.190279900s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
-   0.190326500s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\cortex-m-1afbf0e18c612807\lib-cortex_m`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_libgit2_prerelease
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: git_midx_writer_dump
-  18: git_filter_source_repo
-  19: git_midx_writer_dump
-  20: BaseThreadInitThunk
-  21: RtlUserThreadStart
-   0.224245400s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
-   0.224283200s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-24b56c2915dd6ea3\lib-embassy_executor`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_libgit2_prerelease
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: git_midx_writer_dump
-  18: git_filter_source_repo
-  19: git_midx_writer_dump
-  20: BaseThreadInitThunk
-  21: RtlUserThreadStart
-   0.228509400s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
-   0.228600500s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-8c4e4403252734d1\lib-embassy_nrf`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_libgit2_prerelease
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: git_midx_writer_dump
-  18: git_filter_source_repo
-  19: git_midx_writer_dump
-  20: BaseThreadInitThunk
-  21: RtlUserThreadStart
-   0.230066900s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
-   0.230104900s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-73f23e81fb8ba5da\lib-embassy_hal_internal`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_filter_source_repo
-  13: git_libgit2_prerelease
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: <unknown>
-  18: git_midx_writer_dump
-  19: git_filter_source_repo
-  20: git_midx_writer_dump
-  21: BaseThreadInitThunk
-  22: RtlUserThreadStart
-   0.238570500s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
-   0.238605200s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-dd211363c7ee3ed2\lib-nrf_pac`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_filter_source_repo
-  13: git_libgit2_prerelease
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: <unknown>
-  18: git_midx_writer_dump
-  19: git_filter_source_repo
-  20: git_midx_writer_dump
-  21: BaseThreadInitThunk
-  22: RtlUserThreadStart
-   0.245253200s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
-   0.245289700s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\panic-probe-f74289351d34705b\lib-panic_probe`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_filter_source_repo
-  12: git_libgit2_prerelease
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: <unknown>
-  17: git_midx_writer_dump
-  18: git_filter_source_repo
-  19: git_midx_writer_dump
-  20: BaseThreadInitThunk
-  21: RtlUserThreadStart
-   0.249664900s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   0.249741100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-e646f307f513d68a\test-bin-hazard-sensor`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-    Checking cortex-m v0.7.7
-error: could not compile `cortex-m` (lib) due to 6 previous errors
+package:   C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\Cargo.toml
+workspace: C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\Cargo.toml
+   0.133231200s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: dependency on `defmt_macros` is newer than we are 13434616952.897488500s > 13434616946.403993400s "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-1.1.1"
+   0.147937200s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint dirty for hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\poppi\\Documents\\Ken\\ANU\\ENGN4300\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.147985600s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(55) })
+   0.160624400s  INFO prepare_target{force=false package_id=defmt v1.1.1 target="defmt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt v1.1.1/Check { test: false }/TargetInner { ..: lib_target("defmt", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-1.1.1\\src\\lib.rs", Edition2021) }
+   0.160690000s  INFO prepare_target{force=false package_id=defmt v1.1.1 target="defmt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { unit: UnitIndex(33), dep_mtime: FileTime { seconds: 13434616952, nanos: 897488500 }, max_mtime: FileTime { seconds: 13434616946, nanos: 403993400 } })
+   0.163175100s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="defmt_macros"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-macros v1.1.1/Build/TargetInner { for_host: true, proc_macro: true, ..: lib_target("defmt_macros", ["proc-macro"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-macros-1.1.1\\src\\lib.rs", Edition2021) }
+   0.163202900s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="defmt_macros"}: cargo::core::compiler::fingerprint:     dirty: UnitDependencyInfoChanged { unit: UnitIndex(34) }
+   0.164753000s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="build-script-build"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-macros v1.1.1/RunCustomBuild/TargetInner { ..: custom_build_target("build-script-build", "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-macros-1.1.1\\build.rs", Edition2021) }
+   0.164781300s  INFO prepare_target{force=false package_id=defmt-macros v1.1.1 target="build-script-build"}: cargo::core::compiler::fingerprint:     dirty: EnvVarChanged { name: "DEFMT_LOG", old_value: Some("debug"), new_value: None }
+   0.166905200s  INFO prepare_target{force=false package_id=defmt-rtt v0.4.2 target="defmt_rtt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt-rtt v0.4.2/Check { test: false }/TargetInner { ..: lib_target("defmt_rtt", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-rtt-0.4.2\\src\\lib.rs", Edition2021) }
+   0.166932000s  INFO prepare_target{force=false package_id=defmt-rtt v0.4.2 target="defmt_rtt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(29) })
+   0.167748400s  INFO prepare_target{force=false package_id=defmt v0.3.100 target="defmt"}: cargo::core::compiler::fingerprint: fingerprint dirty for defmt v0.3.100/Check { test: false }/TargetInner { ..: lib_target("defmt", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\defmt-0.3.100\\src\\lib.rs", Edition2021) }
+   0.167772700s  INFO prepare_target{force=false package_id=defmt v0.3.100 target="defmt"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(30) })
+   0.169469100s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-embedded-hal v0.6.0/Check { test: false }/TargetInner { ..: lib_target("embassy_embedded_hal", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-embedded-hal-0.6.0\\src\\lib.rs", Edition2024) }
+   0.169496100s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(68) })
+   0.177185900s  INFO prepare_target{force=false package_id=embassy-time v0.5.1 target="embassy_time"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-time v0.5.1/Check { test: false }/TargetInner { ..: lib_target("embassy_time", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-time-0.5.1\\src\\lib.rs", Edition2024) }
+   0.177217800s  INFO prepare_target{force=false package_id=embassy-time v0.5.1 target="embassy_time"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(68) })
+   0.181634500s  INFO prepare_target{force=false package_id=embedded-hal v1.0.0 target="embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal v1.0.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("embedded_hal", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-1.0.0\\src\\lib.rs", Edition2021) }
+   0.181662800s  INFO prepare_target{force=false package_id=embedded-hal v1.0.0 target="embedded_hal"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(29) })
+   0.182494400s  INFO prepare_target{force=false package_id=embedded-hal-async v1.0.0 target="embedded_hal_async"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal-async v1.0.0/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("embedded_hal_async", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-async-1.0.0\\src\\lib.rs", Edition2021) }
+   0.182527500s  INFO prepare_target{force=false package_id=embedded-hal-async v1.0.0 target="embedded_hal_async"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(68) })
+   0.184965500s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
+   0.185026800s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(29) })
+   0.188345100s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint dirty for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
+   0.188372800s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(42) })
+   0.200221600s  INFO prepare_target{force=false package_id=embedded-hal-bus v0.3.0 target="embedded_hal_bus"}: cargo::core::compiler::fingerprint: fingerprint dirty for embedded-hal-bus v0.3.0/Check { test: false }/TargetInner { ..: lib_target("embedded_hal_bus", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embedded-hal-bus-0.3.0\\src\\lib.rs", Edition2021) }
+   0.200258800s  INFO prepare_target{force=false package_id=embedded-hal-bus v0.3.0 target="embedded_hal_bus"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(68) })
+   0.203277900s  INFO prepare_target{force=false package_id=lora-phy v3.0.1 target="lora_phy"}: cargo::core::compiler::fingerprint: fingerprint dirty for lora-phy v3.0.1/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("lora_phy", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\lora-phy-3.0.1\\src\\lib.rs", Edition2021) }
+   0.203309300s  INFO prepare_target{force=false package_id=lora-phy v3.0.1 target="lora_phy"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(68) })
+   0.204410800s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint dirty for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\poppi\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
+   0.204437300s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDepFingerprint { unit: UnitIndex(30) })
+   Compiling defmt-macros v1.1.1
+    Checking defmt v1.1.1
+    Checking defmt v0.3.100
+    Checking panic-probe v1.0.0
+    Checking embedded-hal v1.0.0
+    Checking embassy-executor v0.7.0
+    Checking defmt-rtt v0.4.2
+    Checking embedded-hal-async v1.0.0
+    Checking embassy-time v0.5.1
+    Checking lora-phy v3.0.1
+    Checking embedded-hal-bus v0.3.0
+    Checking embassy-embedded-hal v0.6.0
+    Checking embassy-nrf v0.11.0
+    Checking hazard-sensor v0.1.0 (C:\Users\poppi\Documents\Ken\ANU\ENGN4300\hazard-sensor-network\hazard-sensor)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.49s

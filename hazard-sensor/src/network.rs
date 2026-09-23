@@ -1,7 +1,7 @@
 use lora_phy::mod_params::{Bandwidth, CodingRate, SpreadingFactor};
 use heapless::{String,Vec};
 use defmt::{info, warn, error};
-use core::fmt::Write; 
+use core::fmt::Write;
 use sha2::{Digest, Sha256};
 use aes::Aes128;
 use aes::cipher::{BlockCipherEncrypt, BlockCipherDecrypt, Array, KeyInit};
@@ -11,7 +11,7 @@ use core::sync::atomic::Ordering;
 
 // Imported objects/functions from main and sensors module.
 use crate::sensors::{gas_sensor::GasSensor, adc_sensors::AdcSensors, tipping_bucket::RainfallSensor};
-use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET, I2cShared, SX1262}; 
+use crate::{MESHCORE_TX_BUFF, CLOCK_SYNCED, CLOCK_OFFSET, I2cShared, SX1262};
 
 
 //======================================================================================================================
@@ -23,14 +23,14 @@ pub const MAX_PACKET_LEN: usize = 255;
 const MAX_PATH_LEN: usize = 64;
 const MAX_PAYLOAD_LEN: usize = 184;
 // JSON formatting parameter
-const MAX_JSON_LEN: usize = 128; // can be upped to MAX_PAYLOAD_LENGTH if need be 
+const MAX_JSON_LEN: usize = 128; // can be upped to MAX_PAYLOAD_LENGTH if need be
 // Public channel key
 const PUBLIC_CHANNEL_KEY: [u8; 16] = [
     0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a,
     0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72,
 ];
-// Node ID - constant for prototype, derived from Ed25519 key in standard 
-// MeshCore implementation. The real MeshCore ID is feasible to get but it 
+// Node ID - constant for prototype, derived from Ed25519 key in standard
+// MeshCore implementation. The real MeshCore ID is feasible to get but it
 // depends on hosts requirements of ID logging to see if its worth doing.
 pub const NODE_ID: NodeIdHash = 0x42; // 66 in decimal format
 
@@ -42,7 +42,7 @@ type HmacSha256 = Hmac<Sha256>;
 /// Modulation parameters
 pub const TX_POWER_DBM: i32 = 22; // Assumes the antenna will have 8dBi gain.
 pub const FREQ_HZ: u32 = 915_800_000; // Must be in Hz
-pub const BANDWIDTH: Bandwidth = Bandwidth::_250KHz; 
+pub const BANDWIDTH: Bandwidth = Bandwidth::_250KHz;
 pub const SPREADING_FACTOR: SpreadingFactor = SpreadingFactor::_12;
 pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need to reduce CR later to increase efficiency.
 
@@ -50,9 +50,9 @@ pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need 
 /// Single-byte request as RawCustom payload. Only one kind exists for now: "send me
 /// everything." Extend with more variants in further iterations
 const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
-const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1; 
+const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1;
 
-// Battery level check - related constants 
+// Battery level check - related constants
 // const PIN_VBAT: u8 = 0;        NEED TO BE p.AIN3 ?                 // Represents analog pin A0/0 depending on your BSP
 const VBAT_MV_PER_LSB: f32 = 0.73242188_f32;    // 3.0V ADC range / 12-bit resolution
 const VBAT_DIVIDER: f32 = 0.4_f32;              // Resistor divider ratio
@@ -93,7 +93,7 @@ enum RouteType {
     TransportFlood = 0b00,
     // Flood routing
     Flood = 0b01,
-    // Direct routing 
+    // Direct routing
     Direct = 0b10,
     // Direct routing + Transport codes
     TransportDirect = 0b11
@@ -135,7 +135,7 @@ enum PayloadType {
     RawCustom = 0x0F,
 }
 
-/// Header - Payload type (bits 2-5) 
+/// Header - Payload type (bits 2-5)
 impl PayloadType {
     fn from_bits(b: u8) -> Option<Self> {
         match (b >> 2) & 0x0F {
@@ -195,13 +195,13 @@ impl HashSize {
 // Currently only implemented request type is to send all data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RequestKey {
-    DataAll,            // Data from full sensor suite 
+    DataAll,            // Data from full sensor suite
     // Below keys are for extending request functionality to sensor specific requests.
     Wss, // = "WSS"     // Wind speed sensor
     // Wds, // = "WDS"     // Wind direction sensor
-    Aqs, // = "AQS"     // Air quality sensor 
-    Sms, // = "SMS"     // Soil moisture sensor 
-    Tbs, // = "TBS"     // Tipping bucket sensor 
+    Aqs, // = "AQS"     // Air quality sensor
+    Sms, // = "SMS"     // Soil moisture sensor
+    Tbs, // = "TBS"     // Tipping bucket sensor
 }
 
 // Match string format of keywords returning RequestKey type.
@@ -253,7 +253,7 @@ impl RequestKey {
 }
 
 
-/// MeshCore packet object and related, encoding/decoding functions 
+/// MeshCore packet object and related, encoding/decoding functions
 struct Packet<'a> {
     pub payload_version: u8,
     pub route_type: RouteType,
@@ -264,7 +264,7 @@ struct Packet<'a> {
 }
 
 impl<'a> Packet<'a> {
-    /// Encode a fresh outbound packet as an originator, used for data broadcasts 
+    /// Encode a fresh outbound packet as an originator, used for data broadcasts
     fn originate(route_type: RouteType, payload_type: PayloadType, payload: &'a [u8]) -> Result<Self, EncodeError> {
         if payload.len() > MAX_PAYLOAD_LEN {
             return Err(EncodeError::PayloadTooLong);
@@ -320,18 +320,18 @@ impl<'a> Packet<'a> {
         Ok(i)
     }
 
-    /// encode_payload: Encode payload into JSON format using the core-fmt crate. 
-    /// Currently encodes to Raw-Custom payload type format but a second iteration could 
-    /// make use of the Group-Data payload type, which broadcasts to a channel which 
-    /// can be accessed by anyone with a channel key. The complication here is that 
-    /// to broadcast to the channel the payload must be MAC/AES encrypted using the 
-    /// symmetric channel key encryption. For iteration one this is out of scope. 
-    fn encode_payload( 
+    /// encode_payload: Encode payload into JSON format using the core-fmt crate.
+    /// Currently encodes to Raw-Custom payload type format but a second iteration could
+    /// make use of the Group-Data payload type, which broadcasts to a channel which
+    /// can be accessed by anyone with a channel key. The complication here is that
+    /// to broadcast to the channel the payload must be MAC/AES encrypted using the
+    /// symmetric channel key encryption. For iteration one this is out of scope.
+    fn encode_payload(
         r: &SensorReadings,
     ) -> Result<String<MAX_JSON_LEN>, EncodeError>{
         let mut payload: String<MAX_JSON_LEN> = String::new();
         write!(
-            payload, 
+            payload,
             "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
             r.wss.unwrap(), r.aqs.unwrap().0, r.aqs.unwrap().1, r.aqs.unwrap().2, r.aqs.unwrap().3, r.sms.unwrap(), r.tbs.unwrap()
         )
@@ -339,8 +339,8 @@ impl<'a> Packet<'a> {
         Ok(payload)
     }
 
-    /// Parse a received over-the-air frame. Transforms raw bytes [u8] into Packet  
-    /// Borrows the payload slice from `buf` so this stays allocation-free. - NEED TO VERIFY THIS PROPERTY OF THE FUNCTION 
+    /// Parse a received over-the-air frame. Transforms raw bytes [u8] into Packet
+    /// Borrows the payload slice from `buf` so this stays allocation-free. - NEED TO VERIFY THIS PROPERTY OF THE FUNCTION
     fn decode(buf: &'a [u8]) -> Result<Self, DecodeError> {
         if buf.is_empty() {
             return Err(DecodeError::TooShort);
@@ -395,8 +395,8 @@ impl<'a> Packet<'a> {
 }
 
 
-/// Advert payload type struct, used to update node clock to keep broadcast 
-/// timestamps accurate. 
+/// Advert payload type struct, used to update node clock to keep broadcast
+/// timestamps accurate.
 struct Advert<'a> {
     pub public_key: [u8; 32],
     pub timestamp: u32,
@@ -423,9 +423,9 @@ impl<'a> Advert<'a> {
 // NOTE: partial instances are only safe with send_group_text_single_sensor, never send_group_text_sensor_data
 #[derive(Clone, Copy, Debug)]
 pub struct SensorReadings {
-    pub wss: Option<f32>,  
+    pub wss: Option<f32>,
     // pub wds: Option<f32>,
-    pub aqs: Option<(f64, f64, f64, u8)>, 
+    pub aqs: Option<(f64, f64, f64, u8)>,
     pub sms: Option<f32>,
     pub tbs: Option<f64>,
 }
@@ -446,11 +446,11 @@ impl Default for SensorReadings {
 //----Transceiver (frame) level functions that deliver MeshCore packets-------------------------------------------------
 //======================================================================================================================
 
-/// (No longer intended to be used) Used for periodic sensor-data broadcast via 
+/// (No longer intended to be used) Used for periodic sensor-data broadcast via
 /// RawCustom packet type. For public channelbroadcast see: send_group_text_sensor_data()
 fn send_sensor_broadcast_raw_custom(r: &SensorReadings) -> Result<(), EncodeError> {
     let json = Packet::encode_payload(&r)?;
-    let response_payload = build_sensor_data_frame(&json)?; 
+    let response_payload = build_sensor_data_frame(&json)?;
 
     let pkt = Packet::originate(RouteType::Flood, PayloadType::RawCustom, &response_payload)?;
     let mut buf = [0u8; MAX_PACKET_LEN];
@@ -513,15 +513,15 @@ fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<
     match key {
         // OPTION_CONVERSION
         // RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
-        // // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        // // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds),
         // RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
-        // RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
+        // RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms),
         // RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
 
         RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss.unwrap()),
-        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
+        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds),
         RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.unwrap().0, r.aqs.unwrap().1, r.aqs.unwrap().2, r.aqs.unwrap().3),
-        RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms.unwrap()), 
+        RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms.unwrap()),
         RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs.unwrap()),
         RequestKey::DataAll => return send_group_text_sensor_data(&r),
     }.map_err(|_| EncodeError::PayloadTooLong)?;
@@ -572,16 +572,16 @@ pub async fn frame_handler(
                 pkt.path.len(),
                 pkt.payload.len(),
             );
-            
-            // Determine action based on rx payload type 
+
+            // Determine action based on rx payload type
             match pkt.payload_type {
                 PayloadType::Request => {
                     info!("Recieved Request packet; packet ignored.");
                     // Can be extended to implement telemetry with MeshCore map
-                }  
+                }
                 PayloadType::Response => {
                     info!("Recieved Response packet; packet ignored.");
-                    // Required pair with request 
+                    // Required pair with request
                 }
                 PayloadType::TextMessage => {
                     info!("Recieved TextMessage packet; packet ignored.");
@@ -592,7 +592,7 @@ pub async fn frame_handler(
                 }
                 // The clock update based on adverts could potentially be abused
                 // by malicious advert packets being injected into the network.
-                // It is therefore a security risk, but a low one. 
+                // It is therefore a security risk, but a low one.
                 PayloadType::Advert => match Advert::decode(pkt.payload){
                     Ok(adv) => {
                         sync_clock_from_received(adv.timestamp);
@@ -606,7 +606,7 @@ pub async fn frame_handler(
                     // Match Group Text to public channel or other.
                     Ok(env) if env.channel_hash == channel_hash(&PUBLIC_CHANNEL_KEY) => {
                         let mut plaintext: heapless::Vec<u8, MAX_PAYLOAD_LEN> = heapless::Vec::new();
-                        // Decrypt HMAC encryption writing to plaintext buffer. 
+                        // Decrypt HMAC encryption writing to plaintext buffer.
                         match mac_then_decrypt(&PUBLIC_CHANNEL_KEY, env.mac, env.ciphertext, &mut plaintext) {
                             Ok(()) => {
                                 // If recovered plaintext is large enough to hold timestamp, use it to update node clock.
@@ -617,7 +617,7 @@ pub async fn frame_handler(
                                 // Match plaintext against known Request Key commands, as specified in section 4.4. of
                                 // the LHN prototype development plan.
                                 match RequestKey::parse(&plaintext) {
-                                    // "DATA" => poll all sensors and send sensor readings. 
+                                    // "DATA" => poll all sensors and send sensor readings.
                                     Some(RequestKey::DataAll) => {
                                         info!("GRP_TXT DATA request recognised — building response");
                                         let r = poll_all(aqs, adc, tbs).await;
@@ -642,7 +642,7 @@ pub async fn frame_handler(
                     Ok(env) => info!("GRP_TXT on unknown channel (hash={}); ignored", env.channel_hash),
                     Err(e) => warn!("failed to parse GroupText envelope: {:?}", defmt::Debug2Format(&e)),
                 }
-                
+
                 PayloadType::GroupData => {
                     info!("Recieved GroupData packet; packet ignored.");
                 }
@@ -660,7 +660,7 @@ pub async fn frame_handler(
                 }
                 PayloadType::Control => {
                     info!("Recieved Control packet; packet ignored.");
-                    // Possibly used with MQTT MeshCore extension for node health checks 
+                    // Possibly used with MQTT MeshCore extension for node health checks
                 }
                 // Currently unused packet type under intended operation, deprecated by:
                 // send_group_text_single_sensor, send_group_text_sensor_data
@@ -761,7 +761,7 @@ fn aes128_ecb_encrypt_zero_padded(
     out: &mut heapless::Vec<u8, MAX_PAYLOAD_LEN>,
 ) -> Result<(), EncodeError> {
     out.clear();
-    let key_arr = Array::from(*key); 
+    let key_arr = Array::from(*key);
     let cipher = Aes128::new(&key_arr);
     let mut i = 0;
     loop {
@@ -858,7 +858,7 @@ pub async fn poll_all(
 // NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 async fn poll_req(
     aqs: &mut GasSensor<I2cShared>,
-    adc: &mut AdcSensors,         
+    adc: &mut AdcSensors,
     tbs: &mut RainfallSensor<I2cShared>,
     key: RequestKey,
 ) -> SensorReadings {
@@ -871,7 +871,7 @@ async fn poll_req(
         // RequestKey::Wds => {
         // let wds_data = poll_wds(adc).await;
         // reutrn SensorReadings { wss:None, wds:Some(wds_data), aqs:None, sms:None, tbs:None}
-        // } 
+        // }
         RequestKey::Aqs => {
             let aqs_data = poll_aqs(aqs).await;
              return SensorReadings { wss:None, aqs:Some(aqs_data), sms:None, tbs:None }
@@ -879,7 +879,7 @@ async fn poll_req(
         RequestKey::Sms => {
             let sms_data = poll_sms(adc).await;
             return SensorReadings { wss:None, aqs:None, sms:Some(sms_data), tbs:None }
-        } 
+        }
         RequestKey::Tbs => {
             let tbs_data = poll_tbs(tbs).await;
             return SensorReadings { wss:None, aqs:None, sms:None, tbs:Some(tbs_data) }
@@ -896,7 +896,7 @@ async fn poll_wss(adc: &mut AdcSensors) -> f32 { //i16
     let r = adc.get_wind_speed().await;
     return r
 }
-// async fn poll_wds(adc: &mut AdcSensors) -> f32 { 
+// async fn poll_wds(adc: &mut AdcSensors) -> f32 {
 //     let r = adc.get_wind_direction().await;
 //     return r
 // }
@@ -906,24 +906,24 @@ async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> (f64, f64, f64, u8) { // Op
             info!("Polled aqs; aqs_tmp:{}, aqs_hum:{}, aqs_prs:{}, aqs_aqi:{}", r.0, r.1, r.2, r.3);
             r
         }
-        Err(e) => { 
+        Err(e) => {
             error!("Error polling gas sensor: {}.", defmt::Debug2Format(&e));
             (0.0, 0.0, 0.0, 0) // (None, None, None, None)
         }
     }
 }
-async fn poll_sms(adc: &mut AdcSensors) -> f32 { 
+async fn poll_sms(adc: &mut AdcSensors) -> f32 {
     let r = adc.get_soil_moisture().await;
     info!("Polled sms: {}",r);
     return r
 }
 async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> f64 { //Option<f64>
-    match tbs.get_rainfall().await{
-        Ok(r) => { 
+    match tbs.get_rainfall_last_hour().await{
+        Ok(r) => {
             info!("Polled tbs:{}", r);
             r
         }
-        Err(e) => { 
+        Err(e) => {
             error!("Error polling rainfall sensor: {}.", defmt::Debug2Format(&e));
             0.0 // None
         }

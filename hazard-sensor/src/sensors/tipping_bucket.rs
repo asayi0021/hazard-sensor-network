@@ -24,9 +24,6 @@ const EXPECTED_VID: u16 = 0x3343;
 /// Expected PID reported by a genuine SEN0575, used alongside [`EXPECTED_VID`].
 const EXPECTED_PID: u32 = 0x100C0;
 
-/// Default I2C address of the SEN0575
-pub const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
-
 /// DFRobot SEN0575 Tipping Bucket Rainfall Sensor.
 pub struct RainfallSensor<I2C> {
     /// I2C bus from NRF52840
@@ -167,8 +164,6 @@ impl<I2C: embedded_hal_async::i2c::I2c> RainfallSensor<I2C> {
         self.write(Registers::BaseRainfall, &scaled_mm_per_tip.to_le_bytes())
             .await?;
 
-        self.reset().await?;
-
         debug!("RAINFALL SENSOR configuration success.");
         Ok(())
     }
@@ -210,8 +205,41 @@ impl<I2C: embedded_hal_async::i2c::I2c> RainfallSensor<I2C> {
         // saturating_sub would instead clamp to 0 and silently hide rainfall
         // for a stretch after the wrap.
         let rainfall_mm = raw_value.wrapping_sub(self.baseline) as f64 / 10000.0;
-
-        debug!("Rainfall read success: {} mm", rainfall_mm);
         Ok(rainfall_mm)
+    }
+
+    /// Set the lookback window (in hours) used by [`Self::get_rainfall_over_hours`].
+    ///
+    /// Per the reference driver's docs, valid values are 1-24 (hours).
+    async fn set_rain_hour(&mut self, hour: u8) -> Result<(), SensorError> {
+        if !(1..=24).contains(&hour) {
+            error!("Invalid RAIN_HOUR value: {} (must be 1-24)", hour);
+            return Err(SensorError::InvalidParameter);
+        }
+        self.write(Registers::RainHour, &[hour]).await?;
+        Ok(())
+    }
+
+    /// Get the rainfall measurement, in millimetres, accumulated over the last
+    /// `hour` hours (valid range 1-24), as reported by the sensor's own
+    /// rolling `TimeRainfall` register -- distinct from [`Self::get_rainfall`],
+    /// which tracks total rainfall since the last software [`Self::reset`].
+    pub async fn get_rainfall_over_hours(&mut self, hour: u8) -> Result<f64, SensorError> {
+        self.set_rain_hour(hour).await?;
+
+        let mut raw = [0u8; 4];
+        self.read(Registers::TimeRainfall, &mut raw).await?;
+
+        // Same 1/10000 mm scale as CumulativeRainfall.
+        let rainfall_mm = u32::from_le_bytes(raw) as f64 / 10000.0;
+
+        debug!("Rainfall over last {} hour(s): {} mm", hour, rainfall_mm);
+        Ok(rainfall_mm)
+    }
+
+    /// Get the rainfall measurement, in millimetres, accumulated over the last
+    /// hour. Shorthand for `get_rainfall_over_hours(1)`.
+    pub async fn get_rainfall_last_hour(&mut self) -> Result<f64, SensorError> {
+        self.get_rainfall_over_hours(1).await
     }
 }

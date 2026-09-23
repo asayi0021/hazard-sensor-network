@@ -21,7 +21,7 @@ pub const SOIL_MOISTURE_CHANNEL: usize = 0; //Confirm ADC wiring
 pub const WIND_SPEED_CHANNEL: usize = 1; //Confirm ADC wiring
 pub const SOIL_DRY_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
 pub const SOIL_WET_BOUND: f32 = 1610.0f32; //Place value here after sensor is calibrated
-pub const SOIL_RANGE: f32 = SOIL_LOWER_BOUND - SOIL_UPPER_BOUND;
+pub const SOIL_RANGE: f32 = SOIL_DRY_BOUND - SOIL_WET_BOUND;
 
 impl AdcSensors {
     pub fn new(saadc: Saadc<'static, 2>, // confirm actual RAK4631 mapping

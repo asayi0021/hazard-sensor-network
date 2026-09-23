@@ -67,6 +67,7 @@ async fn main(_spawner: Spawner) {
 
     let gas_i2c = I2cDevice::new(i2c_bus);
     let rain_i2c = I2cDevice::new(i2c_bus);
+    let direction_i2c = I2cDevice::new(i2c_bus);
 
     let mut gas_sensor =
         match GasSensor::new(gas_i2c, GAS_SENSOR_ADDR).await {
@@ -94,7 +95,7 @@ async fn main(_spawner: Spawner) {
         Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
     };
 
-    // let mut direction_sensor = match DirectionSensor::new(mcu.i2c1, DIRECTION_SENSOR_ADDR).await {
+    // let mut direction_sensor = match DirectionSensor::new(direction_i2c, DIRECTION_SENSOR_ADDR).await {
     //     Ok(sensor) => {
     //         info!("DIRECTION SENSOR initialised.");
     //         sensor
@@ -107,8 +108,8 @@ async fn main(_spawner: Spawner) {
     // };
 
     loop {
-        // let measurement = gas_sensor.get_measurements().await.unwrap();
-        // info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", measurement.0, measurement.1, measurement.2, measurement.3);
+        let measurement = gas_sensor.get_measurements().await.unwrap();
+        info!("Temperature: {}, Humidity: {}, Pressure: {}, Air Quality: {}", measurement.0, measurement.1, measurement.2, measurement.3);
 
         let rainfall = rainfall_sensor.get_rainfall().await.unwrap();
         info!("Rainfall: {} mm", rainfall);

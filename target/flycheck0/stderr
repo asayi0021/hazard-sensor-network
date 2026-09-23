@@ -1,8 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   /Users/gandre/hazard-sensor-network/hazard-sensor/Cargo.toml
 workspace: /Users/gandre/hazard-sensor-network/Cargo.toml
-   0.123171116s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
-   0.123228977s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-e6475a6a0651ea17/bin-hazard-sensor`
+   0.083092977s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("/Users/gandre/hazard-sensor-network/hazard-sensor/src/main.rs", Edition2024) }
+   0.083135686s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (/Users/gandre/hazard-sensor-network/hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/hazard-sensor-e6475a6a0651ea17/bin-hazard-sensor`
 
 Caused by:
     No such file or directory (os error 2)
@@ -27,8 +27,8 @@ Stack backtrace:
   16: std::rt::lang_start_internal
   17: _main
   18: <unknown>
-   0.143250562s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-nrf-0.11.0/src/lib.rs", Edition2024) }
-   0.143283984s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-nrf-98e0bbc4f08b9fdd/lib-embassy_nrf`
+   0.098438556s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-nrf-0.11.0/src/lib.rs", Edition2024) }
+   0.098463962s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-nrf-98e0bbc4f08b9fdd/lib-embassy_nrf`
 
 Caused by:
     No such file or directory (os error 2)
@@ -54,8 +54,8 @@ Stack backtrace:
   17: std::rt::lang_start_internal
   18: _main
   19: <unknown>
-   0.144270225s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-embedded-hal v0.6.0/Check { test: false }/TargetInner { ..: lib_target("embassy_embedded_hal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-embedded-hal-0.6.0/src/lib.rs", Edition2024) }
-   0.144288278s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-embedded-hal-1b1b110ca25aa0aa/lib-embassy_embedded_hal`
+   0.099224831s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-embedded-hal v0.6.0/Check { test: false }/TargetInner { ..: lib_target("embassy_embedded_hal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-embedded-hal-0.6.0/src/lib.rs", Edition2024) }
+   0.099239374s  INFO prepare_target{force=false package_id=embassy-embedded-hal v0.6.0 target="embassy_embedded_hal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-embedded-hal-1b1b110ca25aa0aa/lib-embassy_embedded_hal`
 
 Caused by:
     No such file or directory (os error 2)
@@ -82,8 +82,8 @@ Stack backtrace:
   18: std::rt::lang_start_internal
   19: _main
   20: <unknown>
-   0.144865903s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.4.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.4.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-hal-internal-0.4.0/src/lib.rs", Edition2024) }
-   0.144882996s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.4.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-hal-internal-2b877ea871377bd0/lib-embassy_hal_internal`
+   0.099741747s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.4.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.4.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-hal-internal-0.4.0/src/lib.rs", Edition2024) }
+   0.099755249s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.4.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-hal-internal-2b877ea871377bd0/lib-embassy_hal_internal`
 
 Caused by:
     No such file or directory (os error 2)
@@ -111,8 +111,8 @@ Stack backtrace:
   19: std::rt::lang_start_internal
   20: _main
   21: <unknown>
-   0.145591483s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint: fingerprint error for num-traits v0.2.19/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_traits", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-traits-0.2.19/src/lib.rs", Edition2021) }
-   0.145609213s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/num-traits-721cff8cc221f8b9/lib-num_traits`
+   0.100271950s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint: fingerprint error for num-traits v0.2.19/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_traits", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/num-traits-0.2.19/src/lib.rs", Edition2021) }
+   0.100284334s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/num-traits-721cff8cc221f8b9/lib-num_traits`
 
 Caused by:
     No such file or directory (os error 2)
@@ -141,8 +141,8 @@ Stack backtrace:
   20: std::rt::lang_start_internal
   21: _main
   22: <unknown>
-   0.149706314s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-hal-internal-0.5.0/src/lib.rs", Edition2024) }
-   0.149732825s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-hal-internal-df449e4fb731c13e/lib-embassy_hal_internal`
+   0.103254034s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "/Users/gandre/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/embassy-hal-internal-0.5.0/src/lib.rs", Edition2024) }
+   0.103275279s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `/Users/gandre/hazard-sensor-network/target/thumbv7em-none-eabi/debug/.fingerprint/embassy-hal-internal-df449e4fb731c13e/lib-embassy_hal_internal`
 
 Caused by:
     No such file or directory (os error 2)

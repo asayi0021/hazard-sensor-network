@@ -1,11 +1,11 @@
-//! Driver for the wind direction sensor.
+//! Driver for the wind speed and soil moisture sensors.
 //!
-//! Provides all the necessary functions for collecting wind direction data.
-//! The sensor operates by reading out a voltage from 0V to 5V which corresponds
-//! with a rotation of the flange rotating from 0 degrees to 360 degrees.
-//! The sensor is to be mounted with the marker pointed South. This means that 0V
-//! indicates the flange is pointed to the West, meaning the wind is blowing in
-//! fromt the East.
+//! Provides all the necessary functions for collecting wind speed and soil moisture data.
+//! The wind speed sensor operates by reading out a voltage from 0V to 2V which corresponds
+//! with wind speeds from 0 to 200 km/h.
+//! The soil moisture sensor operates by reading out a voltage from 0V to 3V which corresponds
+//! with soil moisture from 0% to 100%, where 100% represents full submersion of the sensor
+//! in water.
 
 use defmt::{Format, debug,trace, error};
 use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
@@ -174,12 +174,13 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(voltage_mv)
     }
 
-    /// Get wind speed reading from ADC and return wind speed in m/s.
-    pub async fn get_wind_speed(&mut self) -> Result<f32, SensorError> {
+    /// Get wind speed reading from ADC and return wind speed in km/h.
+    pub async fn get_wind_speed(&mut self) -> Result<u32, SensorError> {
         // Get voltage reading from ADC
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::WindSpeed).await?;
 
-        let speed = ((((voltage_mv as f32) / 1023f32) * 3100f32) / 40f32).round();
+        // Convert mV to km/h
+        let speed = (voltage_mv * 200) / 2000;
         Ok(speed)
     }
 

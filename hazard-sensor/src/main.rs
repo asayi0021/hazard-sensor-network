@@ -222,25 +222,25 @@ async fn main(_spawner: Spawner) {
     let wdi_pin = Output::new(p.P0_15, Level::Low, OutputDrive::Standard); // WDI  (RX1)
     let s1_pin = Output::new(p.P0_16, Level::Low, OutputDrive::Standard); // SET1 (TX1)
 
-    let mut watchdog = WatchdogTimer::new(wdi_pin, s1_pin).unwrap();
-    watchdog.set_window(WatchdogWindow::Disabled).unwrap();
+    let mut watchdog = WatchdogTimer::new(wdi_pin, s1_pin).expect("Failed to initialise WATCHDOG");
+    watchdog.set_window(WatchdogWindow::Disabled).expect("Failed to disable WATCHDOG");
     info!("Watchdog disabled");
 
     // Arm the watchdog in 1:2 ratio mode. With SET0 hardwired to 3V3 and CWD
     // left floating (NC), this gives tWDL(max) ~= 920 ms and tWDU(min) ~= 1360 ms.
-    watchdog.set_window(WatchdogWindow::Ratio1To2).unwrap();
+    watchdog.set_window(WatchdogWindow::Ratio1To2).expect("Failed to set WATCHDOG window");
     info!("Watchdog set to 1:2 ratio");
     // Wait out t_WD-setup (150us datasheet minimum) with margin before WDI is recognized.
     Timer::after_micros(500).await;
     // Send the mandatory first pulse, well inside tWDU(min) ~= 1360 ms.
-    watchdog.send_pulse().await.unwrap();
+    watchdog.send_pulse().await.expect("Failed to send WATCHDOG pulse");
     info!("Watchdog first pulse sent");
 
     // Hand the now-armed watchdog off to a dedicated task that feeds it for
     // the rest of the program's life. Spawned here, before the (potentially
     // slower, I2C-bound) sensor init below, so the feed ticker is already
     // running well within the ~1.36s deadline for the *next* pulse.
-    _spawner.spawn(watchdog_task(watchdog)).unwrap();
+    _spawner.spawn(watchdog_task(watchdog)).expect("Failed to spawn WATCHDOG task");
 
     // nRF52 pin definitions to pass to constructors
     // i2c pins

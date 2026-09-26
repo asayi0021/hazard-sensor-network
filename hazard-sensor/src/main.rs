@@ -15,7 +15,7 @@ use embassy_sync::{mutex::Mutex, blocking_mutex::raw::{NoopRawMutex, CriticalSec
 use embassy_nrf::*;
 use embassy_nrf::{saadc::{ChannelConfig, Saadc},uarte::Uarte,gpio::{Level, Output, OutputDrive, Input, Pull}};
 use embassy_executor::Spawner;
-use embassy_time::{Delay, Duration, Timer};
+use embassy_time::{Delay, Duration, Ticker, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
 use embassy_embedded_hal::shared_bus::asynch::i2c::I2cDevice;
 
@@ -69,46 +69,41 @@ pub type I2cShared = I2cDevice<'static, NoopRawMutex, twim::Twim<'static>>;
 
 /// nRF52 custom object for storing initialised buses for different peripheral protocols.
 pub struct NRF52840 {
-    i2c1: twim::Twim<'static>,
-    i2c2: twim::Twim<'static>,
-    saadc: Saadc<'static, 2>,
+    i2c: twim::Twim<'static>,
+    // saadc: Saadc<'static, 2>,
 }
 
 impl NRF52840 {
     pub fn new(
         twispi0: Peri<'static, peripherals::TWISPI0>,
-        twispi1: Peri<'static, peripherals::TWISPI1>,
-        sda1: Peri<'static, peripherals::P0_13>,
-        scl1: Peri<'static, peripherals::P0_14>,
-        sda2: Peri<'static, peripherals::P0_15>,
-        scl2: Peri<'static, peripherals::P0_16>,
-        saadc: Peri<'static, peripherals::SAADC>,
-        adc_channel0: Peri<'static, peripherals::P0_31>,
-        adc_channel1: Peri<'static, peripherals::P0_03>,
+        // twispi1: Peri<'static, peripherals::TWISPI1>,
+        sda: Peri<'static, peripherals::P0_13>,
+        scl: Peri<'static, peripherals::P0_14>,
+        // sda2: Peri<'static, peripherals::P0_15>,
+        // scl2: Peri<'static, peripherals::P0_16>,
+        // saadc: Peri<'static, peripherals::SAADC>,
+        // adc_channel0: Peri<'static, peripherals::P0_31>,
+        // adc_channel1: Peri<'static, peripherals::P0_03>,
         // adc_channel2: Peri<'static, peripherals::P0_03>,
     ) -> Self {
         // Initialise config for each bus
-        let i2c_config1 = twim::Config::default();
-        let i2c_config2 = twim::Config::default();
+        let i2c_config = twim::Config::default();
         let adc_config = saadc::Config::default();
 
         // Initialise saadc channels
-        let channel0 = ChannelConfig::single_ended(adc_channel0);
-        let channel1 = ChannelConfig::single_ended(adc_channel1);
+        // let channel0 = ChannelConfig::single_ended(adc_channel0);
+        // let channel1 = ChannelConfig::single_ended(adc_channel1);
         // let channel2 = ChannelConfig::single_ended(adc_channel2);
 
         // Initialize the i2c drivers
-        let i2c1 = twim::Twim::new(twispi0, Irqs, sda1, scl1, i2c_config1, TX_BUFF1.take());
-        let i2c2 = twim::Twim::new(twispi1, Irqs, sda2, scl2, i2c_config2, TX_BUFF2.take());
+        let i2c = twim::Twim::new(twispi0, Irqs, sda, scl, i2c_config, TX_BUFF1.take());
 
         // Intitialise saadc
-        let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
+        // let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
         // let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1, channel2]);
 
         NRF52840 {
-            i2c1,
-            i2c2,
-            saadc
+            i2c,
         }
     }
 }
@@ -218,42 +213,47 @@ async fn main(_spawner: Spawner) {
     // Initialisation of peripherals struct p
     let p = embassy_nrf::init(Default::default());
 
-    // gpio pins for MIKROE-4416 (watchdog)
-    let io1 = Output::new(p.P0_17, Level::Low, OutputDrive::Standard); //wdi
-    let io2: Output<'_> = Output::new(p.P1_02, Level::High, OutputDrive::Standard); //s0
-    // NOTE: io2 is stated as a controlling pin for the 3V3_S supply voltage rail, it seems that this rail is seperate
-    // from the 3V3 VDD pin on the J-headers and only matters for the sensor slots but this may be an error point.
+    // gpio pins for MIKROE-4416 (watchdog).
+    // IMPORTANT: this MUST NOT be P0_17 (IO1) or P1_02 (IO2) -- those are the
+    // reserved WisBlock pins that toggle the 3V3_S peripheral power rail and
+    // the peripheral-module power enable respectively. Using them here would
+    // mean every send_pulse()/set_window() call also cycles power to every
+    // sensor on the I2C bus. P0_15 (RX1) and P0_16 (TX1) are genuinely free.
+    let wdi_pin = Output::new(p.P0_15, Level::Low, OutputDrive::Standard); // WDI  (RX1)
+    let s1_pin = Output::new(p.P0_16, Level::Low, OutputDrive::Standard); // SET1 (TX1)
 
-    let mut watchdog = WatchdogTimer::new(io1, io2).unwrap();
+    let mut watchdog = WatchdogTimer::new(wdi_pin, s1_pin).unwrap();
     watchdog.set_window(WatchdogWindow::Disabled).unwrap();
     info!("Watchdog disabled");
-    info!("RESESTABLISH RST LINK");
-    Timer::after_secs(5).await;
-    info!("Test 1");
-    // Configure watchdog
-    watchdog.set_window(WatchdogWindow::Ratio1To8).unwrap();
-    info!("Set the watchdog window");
-    // Wait out t_WD-setup with margin before WDI is recognized
+
+    // Arm the watchdog in 1:2 ratio mode. With SET0 hardwired to 3V3 and CWD
+    // left floating (NC), this gives tWDL(max) ~= 920 ms and tWDU(min) ~= 1360 ms.
+    watchdog.set_window(WatchdogWindow::Ratio1To2).unwrap();
+    info!("Watchdog set to 1:2 ratio");
+    // Wait out t_WD-setup (150us datasheet minimum) with margin before WDI is recognized.
     Timer::after_micros(500).await;
-    info!("Waiting for watchdog setup time and for window");
-    // Send the mandatory first pulse, well inside tWDU(min) = 92.7 ms
+    // Send the mandatory first pulse, well inside tWDU(min) ~= 1360 ms.
     watchdog.send_pulse().await.unwrap();
-    info!("Watchdog WDI pulse sent");
-    watchdog.set_window(WatchdogWindow::Disabled).unwrap();
-    info!("Watchdog disabled");
+    info!("Watchdog first pulse sent");
+
+    // Hand the now-armed watchdog off to a dedicated task that feeds it for
+    // the rest of the program's life. Spawned here, before the (potentially
+    // slower, I2C-bound) sensor init below, so the feed ticker is already
+    // running well within the ~1.36s deadline for the *next* pulse.
+    _spawner.spawn(watchdog_task(watchdog)).unwrap();
 
     // nRF52 pin definitions to pass to constructors
     // i2c pins
     let twispi0 = p.TWISPI0;
-    let twispi1 = p.TWISPI1;
+    // let twispi1 = p.TWISPI1;
     let sda1 = p.P0_13; //sda: peripherals::P0_13
     let scl1 = p.P0_14; //scl: peripherals::P0_14
-    let sda2 = p.P0_15;
-    let scl2 = p.P0_16;
+    // let sda2 = p.P0_15;
+    // let scl2 = p.P0_16;
     // adc pins
-    let saadc = p.SAADC;
-    let adc_channel0 = p.P0_31;
-    let adc_channel1 = p.P0_03;
+    // let saadc = p.SAADC;
+    // let adc_channel0 = p.P0_31;
+    // let adc_channel1 = p.P0_03;
     // let adc_channel2 = p.P0_03; pin is AIN3, need to map to RAK4630 pin
 
     // SX1262 pin definitions to pass to constructor
@@ -270,12 +270,12 @@ async fn main(_spawner: Spawner) {
     let nss = p.P1_10;
 
     // Initialisation of RAK4630 objects
-    let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1);
+    let mcu = NRF52840::new(twispi0,sda1,scl1);
     // let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1,adc_channel2);
     let radio = SX1262::new(reset, busy, dio1, rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
 
     // Initialisation of shared I2C bus
-    let i2c_bus = Mutex::new(mcu.i2c1);
+    let i2c_bus = Mutex::new(mcu.i2c);
     let i2c_bus = I2C_BUS.init(i2c_bus);
     // Create seperate objects to pass to constructors for shared I2C bus
     let gas_i2c = I2cDevice::new(i2c_bus);
@@ -386,21 +386,28 @@ async fn radio_task(
 //----Watchdog related firmware-----------------------------------------------------------------------------------------
 //======================================================================================================================
 
-// Watchdog task replies to initial pulse within the window, then disables the
-// the watchdog until a reset (loss of power)
-// #[embassy_executor::task]
-// async fn watchdog_task(mut watchdog: WatchdogTimer<Output<'static>, Output<'static>>) {
-//     // CWD=NC, SET0=0, SET1=0: tWDL(max)=25.9ms, tWDU(min)=46.8ms
-//     let mut ticker = Timer::every(Duration::from_millis(35));
-//     loop {
-//         ticker.next().await;
-//         if watchdog.send_pulse().await.is_err() {
-//             defmt::error!("watchdog pulse failed");
-//         }
-//     }
-// }
-
-    // OUT OF MAIN
-
-    // Start async watchdog task - requires quick initalisation to pulse in the initial window on time.
-    // _spawner.spawn(watchdog_task(watchdog)).unwrap();
+/// Feeds the watchdog for the remainder of the program's life, once it has
+/// already been armed and given its mandatory first pulse in `main`.
+///
+/// With SET0 hardwired to 3V3, SET1 driven by this GPIO, and CWD left
+/// floating (NC), the 1:2 ratio window is tWDL(max) ~= 920 ms and
+/// tWDU(min) ~= 1360 ms (typ. 800 ms / 1.6 s). 1100 ms sits with margin on
+/// both sides of that window -- ~180 ms above the lower boundary and
+/// ~260 ms below the upper boundary -- to absorb scheduler jitter and
+/// timing tolerance. A `Ticker` is used rather than repeated `Timer::after`
+/// calls so the period doesn't drift by however long `send_pulse` itself
+/// takes to run.
+///
+/// This task is not expected to return; if `send_pulse` ever errors, that's
+/// logged but pulsing continues, since giving up here would guarantee a
+/// watchdog-triggered reset rather than risk one.
+#[embassy_executor::task]
+async fn watchdog_task(mut watchdog: WatchdogTimer<Output<'static>, Output<'static>>) {
+    let mut ticker = Ticker::every(Duration::from_millis(1100));
+    loop {
+        ticker.next().await;
+        if watchdog.send_pulse().await.is_err() {
+            error!("watchdog pulse failed");
+        }
+    }
+}

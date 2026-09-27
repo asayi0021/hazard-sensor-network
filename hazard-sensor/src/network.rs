@@ -70,6 +70,7 @@ const REAL_VBAT_MV_PER_LSB: f32 = VBAT_DIVIDER_COMP * VBAT_MV_PER_LSB;
 pub enum EncodeError {
     PathTooLong,
     PayloadTooLong,
+    SensorDataNotFound,
 }
 
 
@@ -196,12 +197,13 @@ impl HashSize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RequestKey {
     DataAll,            // Data from full sensor suite 
-    // Below keys are for extending request functionality to sensor specific requests.
-    Wss, // = "WSS"     // Wind speed sensor
-    // Wds, // = "WDS"     // Wind direction sensor
-    Aqs, // = "AQS"     // Air quality sensor 
-    Sms, // = "SMS"     // Soil moisture sensor 
-    Tbs, // = "TBS"     // Tipping bucket sensor 
+    // Below keys are for extending request functionality to peripheral specific requests.
+    Wss, // "WSS"     // Wind speed sensor
+    // Wds, // "WDS"     // Wind direction sensor
+    Aqs, // "AQS"     // Air quality sensor 
+    Sms, // "SMS"     // Soil moisture sensor 
+    Tbs, // "TBS"     // Tipping bucket sensor 
+    Bat, // "BAT"     // Battery level 
 }
 
 // Match string format of keywords returning RequestKey type.
@@ -213,6 +215,7 @@ impl RequestKey {
     const AQS_KEYWORD: &'static str = "AQS";
     const SMS_KEYWORD: &'static str = "SMS";
     const TBS_KEYWORD: &'static str = "TBS";
+    const BAT_KEYWORD: &'static str = "BAT";
 
     /// This node's addressing tag, e.g. "#42" for NODE_ID = 0x42. A sender
     /// includes this alongside DATA to target this specific node — e.g.
@@ -237,12 +240,13 @@ impl RequestKey {
             return None;
         }
 
-        const KEYWORDS: [(&str, RequestKey); 5] = [
+        const KEYWORDS: [(&str, RequestKey); 6] = [
             (RequestKey::WSS_KEYWORD, RequestKey::Wss),
             // (RequestKey::WDS_KEYWORD, RequestKey::Wds),
             (RequestKey::AQS_KEYWORD, RequestKey::Aqs),
             (RequestKey::SMS_KEYWORD, RequestKey::Sms),
             (RequestKey::TBS_KEYWORD, RequestKey::Tbs),
+            (RequestKey::BAT_KEYWORD, RequestKey::Bat),
             (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
         ];
 
@@ -428,11 +432,12 @@ pub struct SensorReadings {
     pub aqs: Option<(f64, f64, f64, u8)>, 
     pub sms: Option<f32>,
     pub tbs: Option<f64>,
+    pub bat: Option<f32>,
 }
 
 impl SensorReadings {
     const fn empty() -> Self {
-        Self { wss: None, aqs: None, sms: None, tbs: None }
+        Self { wss: None, aqs: None, sms: None, tbs: None, bat: None}
     }
 }
 
@@ -511,18 +516,12 @@ pub fn send_group_text_sensor_data(r: &SensorReadings) -> Result<(), EncodeError
 fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<(), EncodeError> {
     let mut json: heapless::String<64> = heapless::String::new();
     match key {
-        // OPTION_CONVERSION
-        // RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss),
-        // // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
-        // RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.0, r.aqs.1, r.aqs.2, r.aqs.3),
-        // RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms), 
-        // RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs),
-
         RequestKey::Wss => write!(json, "{{\"wss\":{}}}", r.wss.unwrap()),
         // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds), 
         RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", r.aqs.unwrap().0, r.aqs.unwrap().1, r.aqs.unwrap().2, r.aqs.unwrap().3),
         RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms.unwrap()), 
         RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs.unwrap()),
+        RequestKey::Bat => write!(json, "{{\"bat\":{}}}", r.bat.unwrap()),
         RequestKey::DataAll => return send_group_text_sensor_data(&r),
     }.map_err(|_| EncodeError::PayloadTooLong)?;
 
@@ -614,7 +613,7 @@ pub async fn frame_handler(
                                     let received_ts = u32::from_le_bytes([plaintext[0], plaintext[1], plaintext[2], plaintext[3]]);
                                     sync_clock_from_received(received_ts);
                                 }
-                                // Match plaintext against known Request Key commands, as specified in section 4.4. of
+                                // Match plaintext against known Request Key commands, as specified in section 4.3. of
                                 // the LHN prototype development plan.
                                 match RequestKey::parse(&plaintext) {
                                     // "DATA" => poll all sensors and send sensor readings. 
@@ -835,8 +834,6 @@ fn mac_then_decrypt(
 //----Telemetry functions-----------------------------------------------------------------------------------------------
 //======================================================================================================================
 
-// NOTE: The cascading await functions arising from using so many getters could be poor implementation, to be discussed
-
 /// Calls all sensor poll functions to return readings to DATA requests and broadcasts.
 // NOTE: If wds is added back into scope it will be part of the AdcSensors object.
 pub async fn poll_all(
@@ -850,8 +847,8 @@ pub async fn poll_all(
     let sms_data = poll_sms(adc).await;
     let tbs_data = poll_tbs(tbs).await;
 
-    // SensorReadings { wss:Some(wss_data), wds:Some(wds_data), aqs:Some(aqs_data), sms:Some(sms_data), tbs:Some(tbs_data) }
-    SensorReadings { wss: Some(wss_data), aqs: Some(aqs_data), sms: Some(sms_data), tbs: Some(tbs_data) }
+    // Currently battery level is left out of broadcasts and data requests. 
+    SensorReadings { wss: Some(wss_data), aqs: Some(aqs_data), sms: Some(sms_data), tbs: Some(tbs_data), bat: None}
 }
 
 /// Poll the requested sensors returning partially populated sensor readings.
@@ -866,7 +863,7 @@ async fn poll_req(
     match key {
         RequestKey::Wss => {
             let wss_data = poll_wss(adc).await;
-            return SensorReadings { wss:Some(wss_data), aqs:None, sms:None, tbs:None }
+            return SensorReadings { wss:Some(wss_data), aqs:None, sms:None, tbs:None, bat: None }
         }
         // RequestKey::Wds => {
         // let wds_data = poll_wds(adc).await;
@@ -874,19 +871,24 @@ async fn poll_req(
         // } 
         RequestKey::Aqs => {
             let aqs_data = poll_aqs(aqs).await;
-             return SensorReadings { wss:None, aqs:Some(aqs_data), sms:None, tbs:None }
+             return SensorReadings { wss:None, aqs:Some(aqs_data), sms:None, tbs:None, bat: None }
         }
         RequestKey::Sms => {
             let sms_data = poll_sms(adc).await;
-            return SensorReadings { wss:None, aqs:None, sms:Some(sms_data), tbs:None }
+            return SensorReadings { wss:None, aqs:None, sms:Some(sms_data), tbs:None, bat: None }
         } 
         RequestKey::Tbs => {
             let tbs_data = poll_tbs(tbs).await;
-            return SensorReadings { wss:None, aqs:None, sms:None, tbs:Some(tbs_data) }
+            return SensorReadings { wss:None, aqs:None, sms:None, tbs:Some(tbs_data), bat: None}
         }
         RequestKey::DataAll => {
             let r = poll_all(aqs, adc, tbs).await;
             return r
+        }
+        RequestKey::Bat => {
+            error!("poll_req: battery RequestKey passed to poll_req. Use read_vbat for battery requests.");
+            let b = read_vbat(adc).await;
+            return SensorReadings { wss:None, aqs:None, sms:None, tbs:None, bat:Some(b)}
         }
     }
 }

@@ -216,15 +216,15 @@ async fn main(_spawner: Spawner) {
     // i2c pins
     let twispi0 = p.TWISPI0;
     let twispi1 = p.TWISPI1;
-    let sda1 = p.P0_13; //sda: peripherals::P0_13
-    let scl1 = p.P0_14; //scl: peripherals::P0_14
+    let sda1 = p.P0_13; 
+    let scl1 = p.P0_14; 
     let sda2 = p.P0_15; 
     let scl2 = p.P0_16; 
-    // adc pins
-    let saadc = p.SAADC;
-    let adc_channel0 = p.P0_31;
-    let adc_channel1 = p.P0_03; 
-    // let adc_channel2 = p.P0_03; pin is AIN3, need to map to RAK4630 pin
+    // adc pins     
+    let saadc = p.SAADC;        // The adc pins should possible be moved to the ADS1115 to centralise interfaces
+    let adc_channel0 = p.P0_31; // This seems to be AIN7 that may not be usable? 
+    let adc_channel1 = p.P0_03; // This is AIN1 on RAK19007 that breaks out to J-11
+    // let adc_channel2 = p.P0_04;                 // pin is AIN2, WB_A0 
 
     // SX1262 pin definitions to pass to constructor
     let reset = p.P1_06;

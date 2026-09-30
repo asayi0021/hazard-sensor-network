@@ -37,8 +37,8 @@ pub enum SensorSelect {
     Battery,
 }
 
-pub const SOIL_DRY_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
-pub const SOIL_WET_BOUND: f32 = 1610.0f32; //Place value here after sensor is calibrated
+pub const SOIL_DRY_BOUND: f32 = 2581.0; //Place value here after sensor is calibrated
+pub const SOIL_WET_BOUND: f32 = 1610.0; //Place value here after sensor is calibrated
 pub const SOIL_RANGE: f32 = SOIL_DRY_BOUND - SOIL_WET_BOUND;
 
 /// Direction Sensor Errors.
@@ -183,6 +183,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     pub async fn get_soil_moisture(&mut self) -> Result<f32, SensorError> {
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::SoilMoisture).await?;
         debug!("soil moisture sensor voltage: {}", voltage_mv);
+        // Calculate moisture percentage
         let moisture = 100f32 - (((voltage_mv as f32 - SOIL_WET_BOUND) / SOIL_RANGE) * 100f32);
         Ok(moisture)
     }

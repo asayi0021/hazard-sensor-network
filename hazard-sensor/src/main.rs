@@ -55,6 +55,9 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
 pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);
 
+/// Second local clock, purely for 
+// CLOCK_UPTIME = CLOCK_OFFSET - 1789439994
+
 /// Gas sensor I2C slave address
 const GAS_SENSOR_ADDR: u8 = 0x77;
 
@@ -379,7 +382,7 @@ async fn radio_task(
             Either4::Second(frame) => send_frame(&mut radio, &frame).await,
             // Possibility 3: Periodic broadcast reached
             Either4::Third(()) => {
-                let r = poll_all(&mut aqs, &mut adc, &mut tbs).await;
+                let r = poll_all(&mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
                 if let Err(e) = network::send_group_text_sensor_data(&r) {
                     error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
                 } else {

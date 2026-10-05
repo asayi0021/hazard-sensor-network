@@ -26,6 +26,9 @@ pub struct AdcSensors<I2C> {
 }
  
 /// Fixed-size ring buffer of wind speed samples in km/h (240 bytes).
+/// It should be noted that when this does not contain any entry
+/// it will lead to errors that stop transmissions. This should
+/// never occur except possibly directly after node reboot. 
 pub struct WindHistory {
     samples: [f32; WIND_HISTORY_LEN],
     /// Index the next sample will be written to (also the oldest sample once full).

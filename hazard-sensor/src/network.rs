@@ -204,11 +204,12 @@ enum RequestKey {
     Wss10, // "WSS10"
     Wss15, // "WSS15"
     Wss30, // "WSS30"
-    // Wds, // "WDS"     // Wind direction sensor
+    // Wds, // "WDS"      // Wind direction sensor
     Aqs,   // "AQS"     // Air quality sensor 
     Sms,   // "SMS"     // Soil moisture sensor 
     Tbs,   // "TBS"     // Tipping bucket sensor 
     Bat,   // "BAT"     // Battery level 
+    Upt,   // "UPT"     // Uptime (time from last reboot)
 }
 
 // Match string format of keywords returning RequestKey type.
@@ -226,6 +227,7 @@ impl RequestKey {
     const SMS_KEYWORD: &'static str = "SMS";
     const TBS_KEYWORD: &'static str = "TBS";
     const BAT_KEYWORD: &'static str = "BAT";
+    const UPT_KEYWORD: &'static str = "UPT";
 
     /// This node's addressing tag, e.g. "#42" for NODE_ID = 0x42. A sender
     /// includes this alongside DATA to target this specific node — e.g.
@@ -259,7 +261,8 @@ impl RequestKey {
         //     return None;
         // }
 
-        const KEYWORDS: [(&str, RequestKey); 11] = [
+        const KEYWORDS: [(&str, RequestKey); 12] = [
+            (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
             (RequestKey::WSS_KEYWORD, RequestKey::Wss),
             (RequestKey::WSS0_KEYWORD, RequestKey::Wss0),
             (RequestKey::WSS5_KEYWORD, RequestKey::Wss5),
@@ -271,7 +274,7 @@ impl RequestKey {
             (RequestKey::SMS_KEYWORD, RequestKey::Sms),
             (RequestKey::TBS_KEYWORD, RequestKey::Tbs),
             (RequestKey::BAT_KEYWORD, RequestKey::Bat),
-            (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
+            (RequestKey::UPT_KEYWORD, RequestKey::Upt),
         ];
 
         // KEYWORDS.iter().find_map(|&(keyword, key)| {
@@ -560,12 +563,15 @@ fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<
         RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs.ok_or(EncodeError::SensorDataNotFound)?),
         RequestKey::Bat => write!(json, "{{\"bat\":{}}}", r.bat.ok_or(EncodeError::SensorDataNotFound)?),
         RequestKey::DataAll => return send_group_text_sensor_data(&r),
+        RequestKey::Upt => return Err(EncodeError::SensorDataNotFound),
     }.map_err(|_| EncodeError::PayloadTooLong)?;
 
     let mut response_text: heapless::String<96> = heapless::String::new();
     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json).map_err(|_| EncodeError::PayloadTooLong)?;
     send_group_text(&response_text)
 }
+
+
 
 /// Current timestamp - for use in outgoing packet plaintexts.
 fn get_current_timestamp() -> u32 {
@@ -657,9 +663,25 @@ pub async fn frame_handler(
                                     // "DATA" => poll all sensors and send sensor readings.
                                     Some(RequestKey::DataAll) => {
                                         info!("GRP_TXT DATA request recognised — building response");
-                                        let r = poll_all(aqs, adc, tbs).await;
+                                        let r = poll_all(aqs, adc, tbs, wind_history).await;
                                         if let Err(e) = send_group_text_sensor_data(&r) {
                                             warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
+                                        }
+                                    }
+                                    Some(RequestKey::Upt) =>{
+                                        info!("GRP_TXT uptime request recognised");
+                                        let uptime = Instant::now().as_secs();
+                                        let mut response_text: heapless::String<96> = heapless::String::new();
+                                        let upt = write!(
+                                            response_text,
+                                            "hazard-sensor-{:#04x}: {{\"upt\":{}}}",
+                                            NODE_ID,
+                                            uptime
+                                        );
+                                        if upt.is_err() {
+                                            warn!("uptime response did not fit in buffer");
+                                        } else if let Err(e) = send_group_text(&response_text) {
+                                            warn!("failed to send GRP_TXT uptime response: {:?}", defmt::Debug2Format(&e));
                                         }
                                     }
                                     // other keys => poll sensor that matches request key and send single sensor readings.
@@ -878,8 +900,10 @@ pub async fn poll_all(
     aqs: &mut GasSensor<I2cShared>,
     adc: &mut AdcSensors<I2cShared>,
     tbs: &mut RainfallSensor<I2cShared>,
+    wind_history: &mut WindHistory,
 ) -> SensorReadings {
-    let wss_data = poll_wss(adc).await;
+    let wss_data = wind_history.average_last(60);
+    // let wss_data = poll_wss(adc).await;// LIVE WSS DATA MAY BE BETTER
     // let wds_data = poll_wds(wds).await;
     let aqs_data = poll_aqs(aqs).await;
     let sms_data = poll_sms(adc).await;
@@ -921,7 +945,7 @@ async fn poll_req(
             return SensorReadings { wss:wss_data, aqs:None, sms:None, tbs:None, bat: None }
         }
         RequestKey::Wss30 => {
-            let wss_data = poll_wss(adc).await;
+            let wss_data = wind_history.average_last(30);
             return SensorReadings { wss:wss_data, aqs:None, sms:None, tbs:None, bat: None }
         }
         // RequestKey::Wds => {
@@ -941,11 +965,11 @@ async fn poll_req(
             return SensorReadings { wss:None, aqs:None, sms:None, tbs:tbs_data, bat: None}
         }
         RequestKey::DataAll => {
-            let r = poll_all(aqs, adc, tbs).await;
+            let r = poll_all(aqs, adc, tbs, wind_history).await;
             return r
         }
         RequestKey::Bat => {
-            error!("poll_req: battery RequestKey passed to poll_req. Use read_vbat for battery requests.");
+            info!("poll_req: battery RequestKey passed to poll_req. Use read_vbat for battery requests.");
             match read_bat(adc).await {
                 Ok(b) => {
                     info!("poll_req: battery percentage estimated at: {}", b);
@@ -957,6 +981,7 @@ async fn poll_req(
                 }
             }
         }
+        RequestKey::Upt => SensorReadings::empty()
     }
 }
 

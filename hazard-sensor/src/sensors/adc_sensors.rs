@@ -12,6 +12,7 @@
 use defmt::{Format, debug,trace, error};
 use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
 use embassy_nrf::saadc::{ChannelConfig, Config, Saadc};
+use embassy_time::Timer;
 use num_traits::float::FloatCore;
 
 /// Direction Sensor.

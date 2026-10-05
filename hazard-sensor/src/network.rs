@@ -246,9 +246,18 @@ impl RequestKey {
         }
         let text = core::str::from_utf8(&plaintext[4..]).ok()?;
         let tag = Self::node_tag();
-        if !text.contains(tag.as_str()) {
+        
+        // Split on anything that isn't a letter, digit or '#'. This also strips the
+        // 0x00 flags byte that follows the timestamp.
+        let is_sep = |c: char| !(c.is_ascii_alphanumeric() || c == '#');
+
+        // Node tag must be a whole token, so "#42" doesn't match "#420".
+        if !text.split(is_sep).any(|t| t == tag.as_str()) {
             return None;
         }
+        // if !text.contains(tag.as_str()) {
+        //     return None;
+        // }
 
         const KEYWORDS: [(&str, RequestKey); 11] = [
             (RequestKey::WSS_KEYWORD, RequestKey::Wss),
@@ -265,8 +274,11 @@ impl RequestKey {
             (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
         ];
 
-        KEYWORDS.iter().find_map(|&(keyword, key)| {
-            text.contains(keyword).then_some(key)
+        // KEYWORDS.iter().find_map(|&(keyword, key)| {
+        //     text.contains(keyword).then_some(key)
+        // })
+        text.split(is_sep).find_map(|tok| {
+            KEYWORDS.iter().find(|(k, _)| *k == tok).map(|&(_, key)| key)
         })
     }
 }

@@ -9,14 +9,26 @@
 
 use defmt::{Format, debug,trace, error};
 use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
+use embassy_nrf::saadc::{ChannelConfig, Config, Saadc};
 use num_traits::float::FloatCore;
 
 /// Direction Sensor.
 pub struct AdcSensors<I2C> {
+    /// Onboard ADC for battery check
+    adc: Saadc<'static, 1>,
     /// I2C bus from NRF52840
     i2c: I2C,
     /// I2C address of sensor
     addr: SevenBitAddress,
+}
+ 
+/// Fixed-size ring buffer of wind speed samples in km/h (240 bytes).
+pub struct WindHistory {
+    samples: [f32; WIND_HISTORY_LEN],
+    /// Index the next sample will be written to (also the oldest sample once full).
+    next: usize,
+    /// Number of valid samples; < WIND_HISTORY_LEN until the buffer fills.
+    len: usize,
 }
 
 /// List of read/writable registers (and their address) on the gas sensor.
@@ -32,9 +44,12 @@ pub enum Registers {
 pub enum SensorSelect {
     SoilMoisture,
     WindSpeed,
-    Battery,
+    // Battery,
 }
 
+/// Number of samples kept. 60 samples at one per minute = the previous hour.
+pub const WIND_HISTORY_LEN: usize = 60;
+/// Soil calibration constants.
 pub const SOIL_DRY_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
 pub const SOIL_WET_BOUND: f32 = 1610.0f32; //Place value here after sensor is calibrated
 pub const SOIL_RANGE: f32 = SOIL_DRY_BOUND - SOIL_WET_BOUND;
@@ -45,6 +60,7 @@ pub enum SensorError {
     GetDataError,
     I2cError(ErrorKind),
     InvalidParameter,
+    BatteryMappingError,
 }
 
 impl<E: Error> From<E> for SensorError {
@@ -55,8 +71,8 @@ impl<E: Error> From<E> for SensorError {
 
 impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     /// Initialise a new direction sensor.
-    pub async fn new(i2c: I2C, addr: u8) -> Result<Self, SensorError>{
-        Ok(Self { i2c, addr })
+    pub async fn new(adc: Saadc<'static, 1>, i2c: I2C, addr: u8) -> Result<Self, SensorError>{
+        Ok(Self { adc, i2c, addr })
     }
 
     /// Write to one register.
@@ -118,10 +134,10 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
                 // init_config: OS=0, MUX=101, PGA=000, MODE=1 (single-shot)
                 self.write(Registers::Config, &[0b0101_0001, 0b1000_0011]).await?;
             },
-            SensorSelect::Battery => {
-                // init_config: OS=0, MUX=110, PGA=000, MODE=1 (single-shot)
-                self.write(Registers::Config, &[0b0110_0001, 0b1000_0011]).await?;
-            },
+            // SensorSelect::Battery => {
+            //     // init_config: OS=0, MUX=110, PGA=000, MODE=1 (single-shot)
+            //     self.write(Registers::Config, &[0b0110_0001, 0b1000_0011]).await?;
+            // },
         }
         Ok(())
     }
@@ -184,11 +200,98 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(wind_speed_kmh)
     }
 
-    /// Get battery voltage from ADC and return value in mV.
-    pub async fn get_battery_voltage(&mut self) -> Result<u32, SensorError> {
-        // Get voltage reading from ADC
-        let voltage_mv = self.get_adc_reading_mv(SensorSelect::Battery).await?;
+    /// Get battery voltage from internal ADC, and return approximated percentage.
+    pub async fn get_battery_level(&mut self) -> Result<u8, SensorError> {
+        // ADC conversion and compensation
+        const ADC_COMPENSATION_FACTOR: f32 = 1.73;
+        const ADC_CONVERSION_FACTOR: f32 = 0.87890625; // 1/2^12 * 0.6/(1/6) * 1000 (mV/LSB)
+        // Need to verify above value 
 
-        Ok(voltage_mv)
+        // ADC sampling
+        let mut raw = [0i16];
+        self.adc.sample(&mut raw).await;
+
+        // ADC conversion and scaling
+        let adc_data = raw[0] as f32; 
+        let v_bat = adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR; // in mV
+        
+        // Map mV value to percent
+        mv_to_percent(v_bat)
     }
 }
+
+impl WindHistory {
+    pub const fn new() -> Self {
+        Self {
+            samples: [0.0; WIND_HISTORY_LEN],
+            next: 0,
+            len: 0,
+        }
+    }
+ 
+    /// Store a sample, overwriting the oldest once the buffer is full.
+    pub fn push(&mut self, kmh: f32) {
+        self.samples[self.next] = kmh;
+        self.next = (self.next + 1) % WIND_HISTORY_LEN;
+        if self.len < WIND_HISTORY_LEN {
+            self.len += 1;
+        }
+    }
+ 
+    /// Number of samples currently held (0..=60).
+    pub fn len(&self) -> usize {
+        self.len
+    }
+ 
+    /// The `i`th most recent sample (0 = newest). Caller guarantees i < len.
+    fn recent(&self, i: usize) -> f32 {
+        self.samples[(self.next + WIND_HISTORY_LEN - 1 - i) % WIND_HISTORY_LEN]
+    }
+ 
+    /// Mean of the most recent `minutes` samples (one sample per minute).
+    ///
+    /// If fewer than `minutes` samples exist yet (e.g. just after boot), the
+    /// mean of whatever is available is returned. Returns `None` if the
+    /// buffer is empty. `minutes` is capped at the buffer length.
+    pub fn average_last(&self, minutes: usize) -> Option<f32> {
+        let n = minutes.min(self.len);
+        if n == 0 {
+            return None;
+        }
+        let sum: f32 = (0..n).map(|i| self.recent(i)).sum();
+        Some(sum / n as f32)
+    }
+}
+
+// Approximate mapping battery voltage (mV) to %
+fn mv_to_percent(mv: f32) -> Result<u8, SensorError> {
+    // Mapping error boundaries 
+    const VBAT_MIN_MV: f32 = 2500.0;
+    const VBAT_MAX_MV: f32 = 4500.0;
+
+    if mv > VBAT_MAX_MV || mv < VBAT_MIN_MV{
+        return  Err(SensorError::BatteryMappingError)
+    } 
+
+    // Define mapping from mV to % 
+    const CURVE: [(u16, u8); 11] = [
+        (3300, 0), (3500, 5), (3600, 10), (3700, 25), (3750, 40), (3800, 55),
+        (3850, 65), (3900, 75), (4000, 85), (4100, 95), (4200, 100),
+    ];
+
+    // Project voltage to mapping.
+    let mv = mv as u16;
+    if mv <= CURVE[0].0 { return Ok(0); }
+    if mv >= CURVE[CURVE.len() - 1].0 { return Ok(100); }
+    for w in CURVE.windows(2) {
+        let (v0, p0) = w[0];
+        let (v1, p1) = w[1];
+        if mv <= v1 {
+            let frac = (mv - v0) as f32 / (v1 - v0) as f32;
+            return Ok((p0 as f32 + frac * (p1 as f32 - p0 as f32)) as u8);
+        }
+    }
+    Err(SensorError::BatteryMappingError)
+}
+
+

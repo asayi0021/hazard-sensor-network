@@ -53,8 +53,8 @@ pub enum SensorSelect {
 /// Number of samples kept. 60 samples at one per minute = the previous hour.
 pub const WIND_HISTORY_LEN: usize = 60;
 /// Soil calibration constants.
-pub const SOIL_DRY_BOUND: f32 = 2934.0f32; //Place value here after sensor is calibrated
-pub const SOIL_WET_BOUND: f32 = 1610.0f32; //Place value here after sensor is calibrated
+pub const SOIL_DRY_BOUND: f32 = 2581.0; //Place value here after sensor is calibrated
+pub const SOIL_WET_BOUND: f32 = 1610.0; //Place value here after sensor is calibrated
 pub const SOIL_RANGE: f32 = SOIL_DRY_BOUND - SOIL_WET_BOUND;
 
 /// Direction Sensor Errors.

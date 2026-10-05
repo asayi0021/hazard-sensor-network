@@ -1,9 +1,8 @@
 warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor\Cargo.toml
 workspace: C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\Cargo.toml
-    Blocking waiting for file lock on build directory
-   3.386408100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   3.386488400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-9f21ebba89d6ac29\bin-hazard-sensor`
+   0.167631400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: false }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.167699100s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-9f21ebba89d6ac29\bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -30,8 +29,8 @@ Stack backtrace:
   18: git_midx_writer_dump
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
-   3.463598900s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
-   3.463654100s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\cortex-m-1afbf0e18c612807\lib-cortex_m`
+   0.182678300s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint: fingerprint error for cortex-m v0.7.7/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("cortex_m", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\cortex-m-0.7.7\\src\\lib.rs", Edition2018) }
+   0.182712600s  INFO prepare_target{force=false package_id=cortex-m v0.7.7 target="cortex_m"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\cortex-m-1afbf0e18c612807\lib-cortex_m`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -59,8 +58,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   4.035415000s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
-   4.035450600s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-24b56c2915dd6ea3\lib-embassy_executor`
+   0.212757300s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-executor v0.7.0/Check { test: false }/TargetInner { ..: lib_target("embassy_executor", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-executor-0.7.0\\src\\lib.rs", Edition2021) }
+   0.212789600s  INFO prepare_target{force=false package_id=embassy-executor v0.7.0 target="embassy_executor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-executor-24b56c2915dd6ea3\lib-embassy_executor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -88,8 +87,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   4.094036600s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
-   4.094069100s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-8c4e4403252734d1\lib-embassy_nrf`
+   0.215672900s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-nrf v0.11.0/Check { test: false }/TargetInner { ..: lib_target("embassy_nrf", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-nrf-0.11.0\\src\\lib.rs", Edition2024) }
+   0.215696900s  INFO prepare_target{force=false package_id=embassy-nrf v0.11.0 target="embassy_nrf"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-nrf-8c4e4403252734d1\lib-embassy_nrf`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -117,8 +116,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   4.103423800s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
-   4.103454700s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-73f23e81fb8ba5da\lib-embassy_hal_internal`
+   0.216649200s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint: fingerprint error for embassy-hal-internal v0.5.0/Check { test: false }/TargetInner { ..: lib_target("embassy_hal_internal", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\embassy-hal-internal-0.5.0\\src\\lib.rs", Edition2024) }
+   0.216671100s  INFO prepare_target{force=false package_id=embassy-hal-internal v0.5.0 target="embassy_hal_internal"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\embassy-hal-internal-73f23e81fb8ba5da\lib-embassy_hal_internal`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -147,8 +146,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   4.217903700s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
-   4.217936200s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-dd211363c7ee3ed2\lib-nrf_pac`
+   0.223752100s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint: fingerprint error for nrf-pac v0.4.0/Check { test: false }/TargetInner { ..: lib_target("nrf_pac", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\nrf-pac-0.4.0\\src\\lib.rs", Edition2021) }
+   0.223794500s  INFO prepare_target{force=false package_id=nrf-pac v0.4.0 target="nrf_pac"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\nrf-pac-dd211363c7ee3ed2\lib-nrf_pac`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -177,8 +176,8 @@ Stack backtrace:
   20: git_midx_writer_dump
   21: BaseThreadInitThunk
   22: RtlUserThreadStart
-   4.304544300s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
-   4.304578100s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\panic-probe-f74289351d34705b\lib-panic_probe`
+   0.229520300s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint: fingerprint error for panic-probe v1.0.0/Check { test: false }/TargetInner { ..: lib_target("panic_probe", ["lib"], "C:\\Users\\redtr\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\panic-probe-1.0.0\\src\\lib.rs", Edition2021) }
+   0.229558700s  INFO prepare_target{force=false package_id=panic-probe v1.0.0 target="panic_probe"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\panic-probe-f74289351d34705b\lib-panic_probe`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -206,36 +205,8 @@ Stack backtrace:
   19: git_midx_writer_dump
   20: BaseThreadInitThunk
   21: RtlUserThreadStart
-   4.345161400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
-   4.345199400s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-e646f307f513d68a\test-bin-hazard-sensor`
-
-Caused by:
-    The system cannot find the file specified. (os error 2)
-
-Stack backtrace:
-   0: git_midx_writer_dump
-   1: git_midx_writer_dump
-   2: git_midx_writer_dump
-   3: git_midx_writer_dump
-   4: git_filter_source_repo
-   5: git_filter_source_repo
-   6: git_filter_source_repo
-   7: git_filter_source_repo
-   8: git_filter_source_repo
-   9: git_filter_source_repo
-  10: git_filter_source_repo
-  11: git_libgit2_prerelease
-  12: <unknown>
-  13: <unknown>
-  14: <unknown>
-  15: <unknown>
-  16: git_midx_writer_dump
-  17: git_filter_source_repo
-  18: git_midx_writer_dump
-  19: BaseThreadInitThunk
-  20: RtlUserThreadStart
-   4.346732200s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint: fingerprint error for repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater)/Check { test: false }/TargetInner { name: "repeater", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\repeater\\src\\main.rs", Edition2024) }
-   4.346771600s  INFO prepare_target{force=false package_id=repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater) target="repeater"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\repeater-ea5a0be14f99cae7\bin-repeater`
+   0.233222000s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint: fingerprint error for hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor)/Check { test: true }/TargetInner { name: "hazard-sensor", doc: true, ..: with_path("C:\\Users\\redtr\\OneDrive\\Desktop\\School\\ANU\\Sem1_26\\Capstone\\Rust\\Coding Workspace\\hazard-sensor-network\\hazard-sensor\\src\\main.rs", Edition2024) }
+   0.233256800s  INFO prepare_target{force=false package_id=hazard-sensor v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\hazard-sensor) target="hazard-sensor"}: cargo::core::compiler::fingerprint:     err: failed to read `C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\target\debug\.fingerprint\hazard-sensor-e646f307f513d68a\test-bin-hazard-sensor`
 
 Caused by:
     The system cannot find the file specified. (os error 2)
@@ -263,7 +234,4 @@ Stack backtrace:
   19: BaseThreadInitThunk
   20: RtlUserThreadStart
     Checking cortex-m v0.7.7
-    Checking repeater v0.1.0 (C:\Users\redtr\OneDrive\Desktop\School\ANU\Sem1_26\Capstone\Rust\Coding Workspace\hazard-sensor-network\repeater)
-error: could not compile `repeater` (bin "repeater") due to 2 previous errors
-warning: build failed, waiting for other jobs to finish...
 error: could not compile `cortex-m` (lib) due to 6 previous errors

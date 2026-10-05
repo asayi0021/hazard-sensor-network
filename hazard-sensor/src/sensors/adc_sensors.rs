@@ -6,6 +6,8 @@
 //! The soil moisture sensor operates by reading out a voltage from 0V to 3V which corresponds
 //! with soil moisture from 0% to 100%, where 100% represents full submersion of the sensor
 //! in water.
+//!
+//! Values are collected using the ADS1115 ADC to I2C bus.
 
 use defmt::{Format, debug,trace, error};
 use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
@@ -123,16 +125,17 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(())
     }
 
-    /// Set analog input to read from
-    async fn select_input(&mut self, input: SensorSelect) -> Result<(), SensorError> {
+    /// Set analog input to read from and trigger a one shot measurement.
+    /// ADC returns back to low-power mode once conversion is done.
+    async fn select_input_and_trigger(&mut self, input: SensorSelect) -> Result<(), SensorError> {
         match input {
             SensorSelect::SoilMoisture => {
                 // init_config: OS=0, MUX=100, PGA=000, MODE=1 (single-shot)
-                self.write(Registers::Config, &[0b0100_0001, 0b1000_0011]).await?;
+                self.write(Registers::Config, &[0b1100_0001, 0b1000_0011]).await?;
             },
             SensorSelect::WindSpeed => {
                 // init_config: OS=0, MUX=101, PGA=000, MODE=1 (single-shot)
-                self.write(Registers::Config, &[0b0101_0001, 0b1000_0011]).await?;
+                self.write(Registers::Config, &[0b1101_0001, 0b1000_0011]).await?;
             },
             // SensorSelect::Battery => {
             //     // init_config: OS=0, MUX=110, PGA=000, MODE=1 (single-shot)
@@ -142,17 +145,32 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(())
     }
 
-    /// Trigger a single one-shot conversion. ADC returns back to low-power mode
-    /// conversion is done.
-    async fn trigger_one_shot(&mut self) -> Result<(), SensorError> {
-        // trigger_one_shot: OS=1 (trigger), MUX=100, PGA=000, MODE=1
-        self.write(Registers::Config, &[0b1100_0001, 0b1000_0011]).await?;
+    /// Poll the Config register's OS bit until the one-shot conversion
+    /// completes. Per the ADS1115 datasheet, OS reads back 0 while a
+    /// conversion is in progress and 1 once the result is ready in the
+    /// Conversion register -- without this, a read immediately after
+    /// triggering can return a stale result left over from whichever
+    /// conversion last completed, rather than the one just triggered.
+    async fn wait_for_conversion(&mut self) -> Result<(), SensorError> {
+        loop {
+            let mut cfg = [0u8; 2];
+            self.read(Registers::Config, &mut cfg).await?;
+            if cfg[0] & 0b1000_0000 != 0 {
+                break;
+            }
+
+            // Default data rate (128 SPS) gives a conversion time of ~7.8ms;
+            // 500us keeps polling overhead low without meaningfully
+            // lengthening the wait once the result is actually ready.
+            Timer::after_micros(500).await;
+        }
+
         Ok(())
     }
 
     async fn get_adc_reading_mv(&mut self, input: SensorSelect) -> Result<u32, SensorError> {
-        self.select_input(input).await?;
-        self.trigger_one_shot().await?;
+        self.select_input_and_trigger(input).await?;
+        self.wait_for_conversion().await?;
 
         let mut raw = [0; 2];
         self.read(Registers::Conversion, &mut raw).await?;
@@ -180,6 +198,8 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     /// Get soil moisture reading from ADC and return moisutre in %.
     pub async fn get_soil_moisture(&mut self) -> Result<f32, SensorError> {
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::SoilMoisture).await?;
+        debug!("soil moisture sensor voltage: {}", voltage_mv);
+        // Calculate moisture percentage
         let moisture = 100f32 - (((voltage_mv as f32 - SOIL_WET_BOUND) / SOIL_RANGE) * 100f32);
         Ok(moisture)
     }
@@ -187,6 +207,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     /// Get raw soil moisture ADC reading.
     pub async fn get_raw_soil_moisture(&mut self) -> Result<u32, SensorError> {
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::SoilMoisture).await?;
+        debug!("soil moisture sensor voltage: {}", voltage_mv);
         Ok(voltage_mv)
     }
 
@@ -194,6 +215,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     pub async fn get_wind_speed(&mut self) -> Result<f32, SensorError> {
         // Get voltage reading from ADC
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::WindSpeed).await?;
+        debug!("wind speed sensor voltage: {}", voltage_mv);
 
         // Convert mV to km/h
         let wind_speed_kmh = (voltage_mv as f32 / 2000.0) * 200.0;

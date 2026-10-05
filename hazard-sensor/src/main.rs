@@ -24,7 +24,7 @@ use static_cell::{ConstStaticCell, StaticCell};
 use core::sync::atomic::{AtomicI32, AtomicBool};
 use lora_phy::{LoRa, iv, RxMode, sx126x::{self, Sx1262, Sx126x, TcxoCtrlVoltage}, mod_params::{ModulationParams, PacketParams}};
 use {defmt_rtt as _, panic_probe as _};
-use defmt::{info, warn, error};
+use defmt::{info, warn, debug, error};
 
 // Binding interupts to different buses.
 bind_interrupts!(struct Irqs {
@@ -419,10 +419,16 @@ async fn radio_task(
 #[embassy_executor::task]
 async fn watchdog_task(mut watchdog: WatchdogTimer<Output<'static>, Output<'static>>) {
     let mut ticker = Ticker::every(Duration::from_millis(1100));
+    // let mut counter = 0;         // uncomment counter logic for watchdog test
     loop {
         ticker.next().await;
+        // if counter == 25 {
+        //     debug!("breaking out of watchdog pulse loop");
+        //     break;
+        // }
         if watchdog.send_pulse().await.is_err() {
             error!("watchdog pulse failed");
         }
+        // counter += 1;
     }
 }

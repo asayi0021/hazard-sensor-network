@@ -7,10 +7,10 @@ mod network;
 
 // Imports from other modules
 use crate::network::{frame_handler, send_frame, poll_all, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM};
-use crate::sensors::{watchdog::{WatchdogTimer, WatchdogWindow},gas_sensor::GasSensor,adc_sensors::AdcSensors,tipping_bucket::RainfallSensor}; //
+use crate::sensors::{watchdog::{WatchdogTimer, WatchdogWindow},gas_sensor::GasSensor,adc_sensors::{AdcSensors, WindHistory},tipping_bucket::RainfallSensor}; //
 
 // Embassy imports
-use embassy_futures::select::{select3, Either3};
+use embassy_futures::select::{select4, Either4};
 use embassy_sync::{mutex::Mutex, blocking_mutex::raw::{NoopRawMutex, CriticalSectionRawMutex}, channel::Channel}; //{raw::NoopRawMutex, Mutex}
 use embassy_nrf::*;
 use embassy_nrf::{saadc::{ChannelConfig, Saadc},uarte::Uarte,gpio::{Level, Output, OutputDrive, Input, Pull}};
@@ -64,46 +64,48 @@ const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
 /// ADC to I2C slave address
 const ADC_SENSOR_ADDR: u8 = 0x48;
 
+/// Telemetry frequency constants (seconds)
+const BROADCAST_PERIOD: u64 = 15; // 3600 WHEN NOT TESTING - NEED TO CHANGE
+const WIND_SAMPLE_PERIOD_SECS: u64 = 60;
+
 /// Shortened type for GasSensor and RainfallSensor objects
 pub type I2cShared = I2cDevice<'static, NoopRawMutex, twim::Twim<'static>>;
 
 /// nRF52 custom object for storing initialised buses for different peripheral protocols.
 pub struct NRF52840 {
     i2c: twim::Twim<'static>,
-    // saadc: Saadc<'static, 2>,
+    saadc: Saadc<'static, 1>,
 }
 
 impl NRF52840 {
     pub fn new(
         twispi0: Peri<'static, peripherals::TWISPI0>,
-        // twispi1: Peri<'static, peripherals::TWISPI1>,
         sda: Peri<'static, peripherals::P0_13>,
         scl: Peri<'static, peripherals::P0_14>,
+        saadc_pin: Peri<'static, peripherals::SAADC>,
+        adc_battery_pin: Peri<'static, peripherals::P0_05>,
+        // twispi1: Peri<'static, peripherals::TWISPI1>,
         // sda2: Peri<'static, peripherals::P0_15>,
         // scl2: Peri<'static, peripherals::P0_16>,
-        // saadc: Peri<'static, peripherals::SAADC>,
         // adc_channel0: Peri<'static, peripherals::P0_31>,
         // adc_channel1: Peri<'static, peripherals::P0_03>,
-        // adc_channel2: Peri<'static, peripherals::P0_03>,
     ) -> Self {
         // Initialise config for each bus
         let i2c_config = twim::Config::default();
         let adc_config = saadc::Config::default();
 
         // Initialise saadc channels
-        // let channel0 = ChannelConfig::single_ended(adc_channel0);
-        // let channel1 = ChannelConfig::single_ended(adc_channel1);
-        // let channel2 = ChannelConfig::single_ended(adc_channel2);
+        let bat_channel = ChannelConfig::single_ended(adc_battery_pin); 
 
         // Initialize the i2c drivers
         let i2c = twim::Twim::new(twispi0, Irqs, sda, scl, i2c_config, TX_BUFF1.take());
 
         // Intitialise saadc
-        // let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1]);
-        // let saadc = Saadc::new(saadc, Irqs, adc_config, [channel0, channel1, channel2]);
+        let saadc = Saadc::new(saadc_pin, Irqs, adc_config, [bat_channel]);
 
         NRF52840 {
             i2c,
+            saadc,
         }
     }
 }
@@ -245,16 +247,12 @@ async fn main(_spawner: Spawner) {
     // nRF52 pin definitions to pass to constructors
     // i2c pins
     let twispi0 = p.TWISPI0;
-    // let twispi1 = p.TWISPI1;
-    let sda1 = p.P0_13; //sda: peripherals::P0_13
-    let scl1 = p.P0_14; //scl: peripherals::P0_14
-    // let sda2 = p.P0_15;
-    // let scl2 = p.P0_16;
-    // adc pins
-    // let saadc = p.SAADC;
-    // let adc_channel0 = p.P0_31;
-    // let adc_channel1 = p.P0_03;
-    // let adc_channel2 = p.P0_03; pin is AIN3, need to map to RAK4630 pin
+    let twispi1 = p.TWISPI1;
+    let sda1 = p.P0_13; 
+    let scl1 = p.P0_14; 
+    // adc pins     
+    let saadc_pin = p.SAADC;       
+    let adc_battery_pin = p.P0_05;  // pin is AIN2, WB_A0 
 
     // SX1262 pin definitions to pass to constructor
     let reset = p.P1_06;
@@ -270,8 +268,8 @@ async fn main(_spawner: Spawner) {
     let nss = p.P1_10;
 
     // Initialisation of RAK4630 objects
-    let mcu = NRF52840::new(twispi0,sda1,scl1);
-    // let mcu = NRF52840::new(twispi0,twispi1,sda1,scl1,sda2,scl2,saadc,adc_channel0,adc_channel1,adc_channel2);
+    let mcu = NRF52840::new(twispi0,sda1,scl1, saadc_pin, adc_battery_pin);
+    mcu.saadc.calibrate().await;
     let radio = SX1262::new(reset, busy, dio1, rf_tx_en, rf_rx_en, spi3, sck, miso, mosi, nss).await;
 
     // Initialisation of shared I2C bus
@@ -282,8 +280,10 @@ async fn main(_spawner: Spawner) {
     let rain_i2c = I2cDevice::new(i2c_bus);
     let adc_i2c = I2cDevice::new(i2c_bus);
 
+    
+
     // ADC sensors init - soil moisture (sms) and wind speed (wss)
-    let adc = match AdcSensors::new(adc_i2c, ADC_SENSOR_ADDR).await { // currently on same i2c bus as tbs
+    let adc = match AdcSensors::new(mcu.saadc, adc_i2c, ADC_SENSOR_ADDR).await { // currently on same i2c bus as tbs
         Ok(sensor) => {
             info!("ADC SENSORS initialised.");
             sensor
@@ -299,10 +299,11 @@ async fn main(_spawner: Spawner) {
         },
         Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
     };
-    match aqs.init_config().await {
-        Ok(_) => info!("GAS SENSOR configuration success."),
-        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
-    };
+    // COMMENTED OUT FOR BATTERY TESTING
+    // match aqs.init_config().await {
+    //     Ok(_) => info!("GAS SENSOR configuration success."),
+    //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    // };
 
     // Tipping bucket (rainfall) sensor initialisation
     let mut tbs =
@@ -313,10 +314,11 @@ async fn main(_spawner: Spawner) {
             },
             Err(e) => panic!("Could not intialise RAINFALL SENSOR: {:?}", e),
         };
-    match tbs.init_config().await {
-        Ok(_) => info!("RAINFALL SENSOR configuration success."),
-        Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
-    };
+    // COMMENTED OUT FOR BATTERY TESTING
+    // match tbs.init_config().await {
+    //     Ok(_) => info!("RAINFALL SENSOR configuration success."),
+    //     Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
+    // };
 
     // Start radio task - sends queued transmissions and handles recieved packets
     _spawner.spawn(radio_task(radio, aqs, adc, tbs)).unwrap();
@@ -334,12 +336,18 @@ async fn main(_spawner: Spawner) {
 async fn radio_task(
     mut radio: SX1262,
     // mut wds: WindDirectionSensor,
-    mut aqs: GasSensor<I2cShared>,          // It may be worth making a senors struct
-    mut adc: AdcSensors<I2cShared>,         // to centralise the different sensors
-    mut tbs: RainfallSensor<I2cShared>,     // for passing between functions/tasks
+    mut aqs: GasSensor<I2cShared>,          
+    mut adc: AdcSensors<I2cShared>,         
+    mut tbs: RainfallSensor<I2cShared>,     
 ){
     // Initialise recieved packet buffer locally
     let mut meshcore_rx_buf = [0u8; MAX_PACKET_LEN];
+
+    let mut wind_history = WindHistory::new();
+
+    // Timers for telemetry frequency management, to change frequency change the constants.
+    let mut wind_ticker = Ticker::every(Duration::from_secs(WIND_SAMPLE_PERIOD_SECS));
+    let mut broadcast_ticker = Ticker::every(Duration::from_secs(BROADCAST_PERIOD)); 
 
     loop {
         // Set transceiver to receive mode to listen for incoming packets
@@ -353,28 +361,35 @@ async fn radio_task(
         // This currently poses no issues as the only incoming packets of note
         // are requests and all the broadcasts send out the same data as a
         // response. However this should be investigated as a possible breakpoint.
-        match select3(
+        match select4(
             radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf),
             MESHCORE_TX_BUFF.receive(),
-            Timer::after(Duration::from_secs(15)), //Change back after testing 3600
+            broadcast_ticker.next(),
+            wind_ticker.next(),
         ).await {
             // Possibility 1: Packet recieved (success)
-            Either3::First(Ok((len, status))) => {
+            Either4::First(Ok((len, status))) => {
                 let frame_data = &meshcore_rx_buf[..len as usize];
                 info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
-                frame_handler(frame_data, &mut aqs, &mut adc, &mut tbs).await;
+                frame_handler(frame_data, &mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
             }
             // Possibility 1: Packet recieved (failure)
-            Either3::First(Err(e)) => warn!("radio rx error {:?}", defmt::Debug2Format(&e)),
+            Either4::First(Err(e)) => warn!("radio rx error {:?}", defmt::Debug2Format(&e)),
             // Possibility 2: Packet in buffer ready to send out
-            Either3::Second(frame) => send_frame(&mut radio, &frame).await,
+            Either4::Second(frame) => send_frame(&mut radio, &frame).await,
             // Possibility 3: Periodic broadcast reached
-            Either3::Third(()) => {
+            Either4::Third(()) => {
                 let r = poll_all(&mut aqs, &mut adc, &mut tbs).await;
                 if let Err(e) = network::send_group_text_sensor_data(&r) {
                     error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
                 } else {
                     info!("public channel broadcast sent");
+                }
+            }
+            Either4::Fourth(()) => {
+                match adc.get_wind_speed().await {
+                    Ok(kmh) => wind_history.push(kmh),
+                    Err(e) => warn!("wind sample failed, skipping: {:?}", defmt::Debug2Format(&e)),
                 }
             }
         }

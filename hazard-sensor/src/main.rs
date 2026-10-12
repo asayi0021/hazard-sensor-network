@@ -302,11 +302,10 @@ async fn main(_spawner: Spawner) {
         },
         Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
     };
-    // COMMENTED OUT FOR BATTERY TESTING
-    // match aqs.init_config().await {
-    //     Ok(_) => info!("GAS SENSOR configuration success."),
-    //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
-    // };
+    match aqs.init_config().await {
+        Ok(_) => info!("GAS SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    };
 
     // Tipping bucket (rainfall) sensor initialisation
     let mut tbs =
@@ -317,11 +316,10 @@ async fn main(_spawner: Spawner) {
             },
             Err(e) => panic!("Could not intialise RAINFALL SENSOR: {:?}", e),
         };
-    // COMMENTED OUT FOR BATTERY TESTING
-    // match tbs.init_config().await {
-    //     Ok(_) => info!("RAINFALL SENSOR configuration success."),
-    //     Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
-    // };
+    match tbs.init_config().await {
+        Ok(_) => info!("RAINFALL SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
+    };
 
     // Start radio task - sends queued transmissions and handles recieved packets
     _spawner.spawn(radio_task(radio, aqs, adc, tbs)).unwrap();

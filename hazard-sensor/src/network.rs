@@ -367,12 +367,13 @@ impl<'a> Packet<'a> {
         let (tmp, hum, prs, aqi) = r.aqs.ok_or(EncodeError::SensorDataNotFound)?;
         let sms = r.sms.ok_or(EncodeError::SensorDataNotFound)?;
         let tbs = r.tbs.ok_or(EncodeError::SensorDataNotFound)?;
+        let bat = r.bat.ok_or(EncodeError::SensorDataNotFound)?;
 
         let mut payload: String<MAX_JSON_LEN> = String::new();
         write!(
             payload,
-            "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
-            wss, tmp, hum, prs, aqi, sms, tbs
+            "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{},\"bat\":{}}}",
+            wss, tmp, hum, prs, aqi, sms, tbs, bat
         )
         .map_err(|_| EncodeError::PayloadTooLong)?;
         Ok(payload)
@@ -663,7 +664,11 @@ pub async fn frame_handler(
                                     // "DATA" => poll all sensors and send sensor readings.
                                     Some(RequestKey::DataAll) => {
                                         info!("GRP_TXT DATA request recognised — building response");
-                                        let r = poll_all(aqs, adc, tbs, wind_history).await;
+                                        let mut r = poll_all(aqs, adc, tbs, wind_history).await;
+                                        match read_bat(adc).await{
+                                            Ok(bat) => r.bat = Some(bat),
+                                            Err(e) => error!("Battery reading error in frame_handler: {:?}", defmt::Debug2Format(&e))
+                                        }
                                         if let Err(e) = send_group_text_sensor_data(&r) {
                                             warn!("failed to build/send data as GRP_TXT to public channel: {:?}", defmt::Debug2Format(&e));
                                         }

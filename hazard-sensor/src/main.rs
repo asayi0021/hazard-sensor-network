@@ -65,7 +65,7 @@ const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
 const ADC_SENSOR_ADDR: u8 = 0x48;
 
 /// Telemetry frequency constants (seconds)
-const BROADCAST_PERIOD: u64 = 15; // 3600 WHEN NOT TESTING - NEED TO CHANGE
+const BROADCAST_PERIOD: u64 = 30; // 3600 WHEN NOT TESTING - NEED TO CHANGE
 const WIND_SAMPLE_PERIOD_SECS: u64 = 60;
 
 /// Shortened type for GasSensor and RainfallSensor objects
@@ -95,7 +95,7 @@ impl NRF52840 {
         let adc_config = saadc::Config::default();
 
         // Initialise saadc channels
-        let bat_channel = ChannelConfig::single_ended(adc_battery_pin); 
+        let bat_channel = ChannelConfig::single_ended(adc_battery_pin);
 
         // Initialize the i2c drivers
         let i2c = twim::Twim::new(twispi0, Irqs, sda, scl, i2c_config, TX_BUFF1.take());
@@ -248,11 +248,11 @@ async fn main(_spawner: Spawner) {
     // i2c pins
     let twispi0 = p.TWISPI0;
     let twispi1 = p.TWISPI1;
-    let sda1 = p.P0_13; 
-    let scl1 = p.P0_14; 
-    // adc pins     
-    let saadc_pin = p.SAADC;       
-    let adc_battery_pin = p.P0_05;  // pin is AIN2, WB_A0 
+    let sda1 = p.P0_13;
+    let scl1 = p.P0_14;
+    // adc pins
+    let saadc_pin = p.SAADC;
+    let adc_battery_pin = p.P0_05;  // pin is AIN2, WB_A0
 
     // SX1262 pin definitions to pass to constructor
     let reset = p.P1_06;
@@ -280,15 +280,19 @@ async fn main(_spawner: Spawner) {
     let rain_i2c = I2cDevice::new(i2c_bus);
     let adc_i2c = I2cDevice::new(i2c_bus);
 
-    
+
 
     // ADC sensors init - soil moisture (sms) and wind speed (wss)
-    let adc = match AdcSensors::new(mcu.saadc, adc_i2c, ADC_SENSOR_ADDR).await { // currently on same i2c bus as tbs
+    let mut adc = match AdcSensors::new(mcu.saadc, adc_i2c, ADC_SENSOR_ADDR).await { // currently on same i2c bus as tbs
         Ok(sensor) => {
             info!("ADC SENSORS initialised.");
             sensor
         },
         Err(e) => panic!("Could not intialise ADC SENSOR: {:?}", e),
+    };
+    match adc.init_config().await {
+        Ok(_) => info!("ADC SENSORS configuration success."),
+        Err(err) => panic!("Failed to configure ADC SENSORS: {:?}", err),
     };
 
     // Gas sensor initialisation
@@ -299,11 +303,10 @@ async fn main(_spawner: Spawner) {
         },
         Err(e) => panic!("Could not intialise GAS SENSOR: {:?}", e),
     };
-    // COMMENTED OUT FOR BATTERY TESTING
-    // match aqs.init_config().await {
-    //     Ok(_) => info!("GAS SENSOR configuration success."),
-    //     Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
-    // };
+    match aqs.init_config().await {
+        Ok(_) => info!("GAS SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure GAS SENSOR: {:?}", err),
+    };
 
     // Tipping bucket (rainfall) sensor initialisation
     let mut tbs =
@@ -314,11 +317,10 @@ async fn main(_spawner: Spawner) {
             },
             Err(e) => panic!("Could not intialise RAINFALL SENSOR: {:?}", e),
         };
-    // COMMENTED OUT FOR BATTERY TESTING
-    // match tbs.init_config().await {
-    //     Ok(_) => info!("RAINFALL SENSOR configuration success."),
-    //     Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
-    // };
+    match tbs.init_config().await {
+        Ok(_) => info!("RAINFALL SENSOR configuration success."),
+        Err(err) => panic!("Failed to configure RAINFALL SENSOR: {:?}", err),
+    };
 
     // Start radio task - sends queued transmissions and handles recieved packets
     _spawner.spawn(radio_task(radio, aqs, adc, tbs)).unwrap();
@@ -336,9 +338,9 @@ async fn main(_spawner: Spawner) {
 async fn radio_task(
     mut radio: SX1262,
     // mut wds: WindDirectionSensor,
-    mut aqs: GasSensor<I2cShared>,          
-    mut adc: AdcSensors<I2cShared>,         
-    mut tbs: RainfallSensor<I2cShared>,     
+    mut aqs: GasSensor<I2cShared>,
+    mut adc: AdcSensors<I2cShared>,
+    mut tbs: RainfallSensor<I2cShared>,
 ){
     // Initialise recieved packet buffer locally
     let mut meshcore_rx_buf = [0u8; MAX_PACKET_LEN];
@@ -347,7 +349,7 @@ async fn radio_task(
 
     // Timers for telemetry frequency management, to change frequency change the constants.
     let mut wind_ticker = Ticker::every(Duration::from_secs(WIND_SAMPLE_PERIOD_SECS));
-    let mut broadcast_ticker = Ticker::every(Duration::from_secs(BROADCAST_PERIOD)); 
+    let mut broadcast_ticker = Ticker::every(Duration::from_secs(BROADCAST_PERIOD));
 
     loop {
         // Set transceiver to receive mode to listen for incoming packets

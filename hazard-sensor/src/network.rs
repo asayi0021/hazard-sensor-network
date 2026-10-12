@@ -913,9 +913,13 @@ pub async fn poll_all(
     let aqs_data = poll_aqs(aqs).await;
     let sms_data = poll_sms(adc).await;
     let tbs_data = poll_tbs(tbs).await;
+    match read_bat(adc).await{
+        Ok(bat) => bat_data = bat,
+        Err(e) => error!("poll_all read_bat error: {:?}", defmt::Debug2Format(&e))
+    }
 
     // Currently battery level is left out of broadcasts and data requests. 
-    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: None}
+    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: Some(bat_data)}
 }
 
 /// Poll the requested sensors returning partially populated sensor readings.

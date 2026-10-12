@@ -907,7 +907,7 @@ pub async fn poll_all(
     tbs: &mut RainfallSensor<I2cShared>,
     wind_history: &mut WindHistory,
 ) -> SensorReadings {
-    let wss_data = wind_history.average_last(60);
+    let wss_data = poll_wss(adc).await;//wind_history.average_last(60);
     // let wss_data = poll_wss(adc).await;// LIVE WSS DATA MAY BE BETTER
     // let wds_data = poll_wds(wds).await;
     let aqs_data = poll_aqs(aqs).await;

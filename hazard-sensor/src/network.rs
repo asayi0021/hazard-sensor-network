@@ -916,7 +916,7 @@ pub async fn poll_all(
     let bat_data = match read_bat(adc).await{
         Ok(bat) => Some(bat),
         Err(e) => {
-            error!("poll_all read_bat error: {:?}", defmt::Debug2Format(&e))
+            error!("poll_all read_bat error: {:?}", defmt::Debug2Format(&e));
             None
         }
     };

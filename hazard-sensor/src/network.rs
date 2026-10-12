@@ -922,7 +922,7 @@ pub async fn poll_all(
     };
 
     // Currently battery level is left out of broadcasts and data requests. 
-    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: Some(bat_data)}
+    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: bat_data}
 }
 
 /// Poll the requested sensors returning partially populated sensor readings.

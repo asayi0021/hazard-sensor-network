@@ -55,7 +55,7 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
 pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);
 
-/// Second local clock, purely for 
+/// Second local clock, purely for
 // CLOCK_UPTIME = CLOCK_OFFSET - 1789439994
 
 /// Gas sensor I2C slave address

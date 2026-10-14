@@ -1,9 +1,9 @@
 //! Driver for the wind speed and soil moisture sensors.
 //!
 //! Provides all the necessary functions for collecting wind speed and soil moisture data.
-//! The wind speed sensor operates by reading out a voltage from 0V to 2V which corresponds
+//! The wind speed sensor (EF04083) operates by reading out a voltage from 0V to 2V which corresponds
 //! with wind speeds from 0 to 200 km/h.
-//! The soil moisture sensor operates by reading out a voltage from 0V to 3V which corresponds
+//! The soil moisture sensor (SEN0193) operates by reading out a voltage from 0V to 3V which corresponds
 //! with soil moisture from 0% to 100%, where 100% represents full submersion of the sensor
 //! in water.
 //!
@@ -24,11 +24,11 @@ pub struct AdcSensors<I2C> {
     /// I2C address of sensor
     addr: SevenBitAddress,
 }
- 
+
 /// Fixed-size ring buffer of wind speed samples in km/h (240 bytes).
 /// It should be noted that when this does not contain any entry
 /// it will lead to errors that stop transmissions. This should
-/// never occur except possibly directly after node reboot. 
+/// never occur except possibly directly after node reboot.
 pub struct WindHistory {
     samples: [f32; WIND_HISTORY_LEN],
     /// Index the next sample will be written to (also the oldest sample once full).
@@ -231,16 +231,16 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         // ADC conversion and compensation
         const ADC_COMPENSATION_FACTOR: f32 = 1.73;
         const ADC_CONVERSION_FACTOR: f32 = 0.87890625; // 1/2^12 * 0.6/(1/6) * 1000 (mV/LSB)
-        // Need to verify above value 
+        // Need to verify above value
 
         // ADC sampling
         let mut raw = [0i16];
         self.adc.sample(&mut raw).await;
 
         // ADC conversion and scaling
-        let adc_data = raw[0] as f32; 
+        let adc_data = raw[0] as f32;
         let v_bat = adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR; // in mV
-        
+
         // Map mV value to percent
         mv_to_percent(v_bat)
     }
@@ -254,7 +254,7 @@ impl WindHistory {
             len: 0,
         }
     }
- 
+
     /// Store a sample, overwriting the oldest once the buffer is full.
     pub fn push(&mut self, kmh: f32) {
         self.samples[self.next] = kmh;
@@ -263,17 +263,17 @@ impl WindHistory {
             self.len += 1;
         }
     }
- 
+
     /// Number of samples currently held (0..=60).
     pub fn len(&self) -> usize {
         self.len
     }
- 
+
     /// The `i`th most recent sample (0 = newest). Caller guarantees i < len.
     fn recent(&self, i: usize) -> f32 {
         self.samples[(self.next + WIND_HISTORY_LEN - 1 - i) % WIND_HISTORY_LEN]
     }
- 
+
     /// Mean of the most recent `minutes` samples (one sample per minute).
     ///
     /// If fewer than `minutes` samples exist yet (e.g. just after boot), the
@@ -291,15 +291,15 @@ impl WindHistory {
 
 // Approximate mapping battery voltage (mV) to %
 fn mv_to_percent(mv: f32) -> Result<u8, SensorError> {
-    // Mapping error boundaries 
+    // Mapping error boundaries
     const VBAT_MIN_MV: f32 = 2500.0;
     const VBAT_MAX_MV: f32 = 4500.0;
 
     if mv > VBAT_MAX_MV || mv < VBAT_MIN_MV{
         return  Err(SensorError::BatteryMappingError)
-    } 
+    }
 
-    // Define mapping from mV to % 
+    // Define mapping from mV to %
     const CURVE: [(u16, u8); 11] = [
         (3300, 0), (3500, 5), (3600, 10), (3700, 25), (3750, 40), (3800, 55),
         (3850, 65), (3900, 75), (4000, 85), (4100, 95), (4200, 100),
@@ -319,5 +319,3 @@ fn mv_to_percent(mv: f32) -> Result<u8, SensorError> {
     }
     Err(SensorError::BatteryMappingError)
 }
-
-

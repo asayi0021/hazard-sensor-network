@@ -10,5 +10,5 @@ rustflags = [
   "-C", "link-arg=-Tdefmt.x",
 ]
 
-[env]
+[env] 
 DEFMT_LOG = "debug"

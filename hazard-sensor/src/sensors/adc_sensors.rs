@@ -226,12 +226,20 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(wind_speed_kmh)
     }
 
-    /// Get battery voltage from internal ADC, and return approximated percentage.
+    /// Get battery level approximation.
     pub async fn get_battery_level(&mut self) -> Result<u8, SensorError> {
+        // Call to get raw battery voltage in mv
+        let v_bat = self.get_battery_mv();
+        
+        // Map mV value to percent
+        mv_to_percent(v_bat.await)
+    }
+
+    /// Get battery voltage from internal ADC, and return approximated percentage.
+    pub async fn get_battery_mv(&mut self) -> f32 {
         // ADC conversion and compensation
-        const ADC_COMPENSATION_FACTOR: f32 = 1.73;
+        const ADC_COMPENSATION_FACTOR: f32 = 1.676;    // Experimentally derived value, not the value from community  of 1.73;
         const ADC_CONVERSION_FACTOR: f32 = 0.87890625; // 1/2^12 * 0.6/(1/6) * 1000 (mV/LSB)
-        // Need to verify above value 
 
         // ADC sampling
         let mut raw = [0i16];
@@ -239,10 +247,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
 
         // ADC conversion and scaling
         let adc_data = raw[0] as f32; 
-        let v_bat = adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR; // in mV
-        
-        // Map mV value to percent
-        mv_to_percent(v_bat)
+        adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR // in mV
     }
 }
 

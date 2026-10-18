@@ -85,4 +85,4 @@ The demo code is stable for Python version 3.13.2 and InfluxDB3 version 3.12.0.
 
 ## Documentation
 
-API documentation: [hazard-sensor docs](https://asayi0021.github.io/hazard-sensor-network/hazard-sensor/)
+API documentation: [hazard-sensor docs](https://asayi0021.github.io/hazard-sensor-network/hazard_sensor/)

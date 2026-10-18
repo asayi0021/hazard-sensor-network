@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["adc_sensors","gas_sensor","tipping_bucket","watchdog"]};

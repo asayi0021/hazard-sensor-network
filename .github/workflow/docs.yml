@@ -29,6 +29,8 @@ jobs:
         run: |
           echo '<meta http-equiv="refresh" content="0; url=hazard-sensor/index.html">' \
             > hazard-sensor/target/thumbv7em-none-eabi/doc/index.html
+      - name: List generated files
+        run: ls hazard-sensor/target/thumbv7em-none-eabi/doc
       - uses: actions/upload-pages-artifact@v3
         with:
           path: hazard-sensor/target/thumbv7em-none-eabi/doc

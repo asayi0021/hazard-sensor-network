@@ -1,18 +1,18 @@
 //! Driver for the wind speed and soil moisture sensors.
 //!
 //! Provides all the necessary functions for collecting wind speed and soil moisture data.
-//! The wind speed sensor (EF04083) operates by reading out a voltage from 0V to 2V which corresponds
+//! The wind speed sensor operates by reading out a voltage from 0V to 2V which corresponds
 //! with wind speeds from 0 to 200 km/h.
-//! The soil moisture sensor (SEN0193) operates by reading out a voltage from 0V to 3V which corresponds
+//! The soil moisture sensor operates by reading out a voltage from 0V to 3V which corresponds
 //! with soil moisture from 0% to 100%, where 100% represents full submersion of the sensor
 //! in water.
 //!
 //! Values are collected using the ADS1115 ADC to I2C bus.
 
-use defmt::{Format, debug, error, trace};
+use defmt::{Format, debug, trace, error};
+use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
 use embassy_nrf::saadc::{ChannelConfig, Config, Saadc};
 use embassy_time::Timer;
-use embedded_hal_async::i2c::{Error, ErrorKind, SevenBitAddress};
 use num_traits::float::FloatCore;
 
 /// Direction Sensor.
@@ -126,8 +126,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
     pub async fn init_config(&mut self) -> Result<(), SensorError> {
         debug!("Configuring ADC BUS...");
         // init_config: OS=0, MUX=100, PGA=000, MODE=1 (single-shot)
-        self.write(Registers::Config, &[0b0100_0001, 0b1000_0011])
-            .await?;
+        self.write(Registers::Config, &[0b0100_0001, 0b1000_0011]).await?;
         Ok(())
     }
 
@@ -137,13 +136,11 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         match input {
             SensorSelect::SoilMoisture => {
                 // init_config: OS=0, MUX=100, PGA=000, MODE=1 (single-shot)
-                self.write(Registers::Config, &[0b1100_0001, 0b1000_0011])
-                    .await?;
+                self.write(Registers::Config, &[0b1100_0001, 0b1000_0011]).await?;
             }
             SensorSelect::WindSpeed => {
                 // init_config: OS=0, MUX=101, PGA=000, MODE=1 (single-shot)
-                self.write(Registers::Config, &[0b1101_0001, 0b1000_0011])
-                    .await?;
+                self.write(Registers::Config, &[0b1101_0001, 0b1000_0011]).await?;
             }
         }
         Ok(())
@@ -229,8 +226,17 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
 
     /// Get battery voltage from internal ADC, and return approximated percentage.
     pub async fn get_battery_level(&mut self) -> Result<u8, SensorError> {
+        // Call to get raw battery voltage in mv
+        let v_bat = self.get_battery_mv();
+
+        // Map mV value to percent
+        mv_to_percent(v_bat.await)
+    }
+
+    /// Get battery voltage from internal ADC, and return approximated percentage.
+    pub async fn get_battery_mv(&mut self) -> f32 {
         // ADC conversion and compensation
-        const ADC_COMPENSATION_FACTOR: f32 = 1.73;
+        const ADC_COMPENSATION_FACTOR: f32 = 1.676;    // Experimentally derived value, not the value from community  of 1.73;
         const ADC_CONVERSION_FACTOR: f32 = 0.87890625; // 1/2^12 * 0.6/(1/6) * 1000 (mV/LSB)
 
         // ADC sampling
@@ -239,15 +245,11 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
 
         // ADC conversion and scaling
         let adc_data = raw[0] as f32;
-        let v_bat = adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR; // in mV
-
-        // Map mV value to percent
-        mv_to_percent(v_bat)
+        adc_data * ADC_CONVERSION_FACTOR * ADC_COMPENSATION_FACTOR // in mV
     }
 }
 
 impl WindHistory {
-    /// Initialise new wind history
     pub const fn new() -> Self {
         Self {
             samples: [0.0; WIND_HISTORY_LEN],
@@ -296,33 +298,20 @@ fn mv_to_percent(mv: f32) -> Result<u8, SensorError> {
     const VBAT_MIN_MV: f32 = 2500.0;
     const VBAT_MAX_MV: f32 = 4500.0;
 
-    if mv > VBAT_MAX_MV || mv < VBAT_MIN_MV {
-        return Err(SensorError::BatteryMappingError);
+    if mv > VBAT_MAX_MV || mv < VBAT_MIN_MV{
+        return  Err(SensorError::BatteryMappingError)
     }
 
     // Define mapping from mV to %
     const CURVE: [(u16, u8); 11] = [
-        (3300, 0),
-        (3500, 5),
-        (3600, 10),
-        (3700, 25),
-        (3750, 40),
-        (3800, 55),
-        (3850, 65),
-        (3900, 75),
-        (4000, 85),
-        (4100, 95),
-        (4200, 100),
+        (3300, 0), (3500, 5), (3600, 10), (3700, 25), (3750, 40), (3800, 55),
+        (3850, 65), (3900, 75), (4000, 85), (4100, 95), (4200, 100),
     ];
 
     // Project voltage to mapping.
     let mv = mv as u16;
-    if mv <= CURVE[0].0 {
-        return Ok(0);
-    }
-    if mv >= CURVE[CURVE.len() - 1].0 {
-        return Ok(100);
-    }
+    if mv <= CURVE[0].0 { return Ok(0); }
+    if mv >= CURVE[CURVE.len() - 1].0 { return Ok(100); }
     for w in CURVE.windows(2) {
         let (v0, p0) = w[0];
         let (v1, p1) = w[1];

@@ -358,37 +358,44 @@ async fn radio_task(
         // This currently poses no issues as the only incoming packets of note
         // are requests and all the broadcasts send out the same data as a
         // response. However this should be investigated as a possible breakpoint.
-        match select4(
-            radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf),
-            MESHCORE_TX_BUFF.receive(),
-            broadcast_ticker.next(),
-            wind_ticker.next(),
-        ).await {
-            // Possibility 1: Packet recieved (success)
-            Either4::First(Ok((len, status))) => {
-                let frame_data = &meshcore_rx_buf[..len as usize];
-                info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
-                frame_handler(frame_data, &mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
-            }
-            // Possibility 1: Packet recieved (failure)
-            Either4::First(Err(e)) => warn!("radio rx error {:?}", defmt::Debug2Format(&e)),
-            // Possibility 2: Packet in buffer ready to send out
-            Either4::Second(frame) => send_frame(&mut radio, &frame).await,
-            // Possibility 3: Periodic broadcast reached
-            Either4::Third(()) => {
-                let r = poll_all(&mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
-                if let Err(e) = network::send_group_text_sensor_data(&r) {
-                    error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
-                } else {
-                    info!("public channel broadcast sent");
+        if check_bat_threshold(&mut adc).await {
+            info!("Battery above idle threshold");
+            match select4(
+                radio.lora_radio.rx(&radio.rx_pkt_params, &mut meshcore_rx_buf),
+                MESHCORE_TX_BUFF.receive(),
+                broadcast_ticker.next(),
+                wind_ticker.next(),
+            ).await {
+                // Possibility 1: Packet recieved (success)
+                Either4::First(Ok((len, status))) => {
+                    let frame_data = &meshcore_rx_buf[..len as usize];
+                    info!("RX {} bytes, rssi={} snr={}", len, status.rssi, status.snr);
+                    frame_handler(frame_data, &mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
+                }
+                // Possibility 1: Packet recieved (failure)
+                Either4::First(Err(e)) => warn!("radio rx error {:?}", defmt::Debug2Format(&e)),
+                // Possibility 2: Packet in buffer ready to send out
+                Either4::Second(frame) => send_frame(&mut radio, &frame).await,
+                // Possibility 3: Periodic broadcast reached
+                Either4::Third(()) => {
+                    let r = poll_all(&mut aqs, &mut adc, &mut tbs, &mut wind_history).await;
+                    if let Err(e) = network::send_group_text_sensor_data(&r) {
+                        error!("failed to send GRP_TXT broadcast: {:?}", defmt::Debug2Format(&e));
+                    } else {
+                        info!("public channel broadcast sent");
+                    }
+                }
+                Either4::Fourth(()) => {
+
+                    match adc.get_wind_speed().await {
+                        Ok(kmh) => wind_history.push(kmh),
+                        Err(e) => warn!("wind sample failed, skipping: {:?}", defmt::Debug2Format(&e)),
+                    }
                 }
             }
-            Either4::Fourth(()) => {
-                match adc.get_wind_speed().await {
-                    Ok(kmh) => wind_history.push(kmh),
-                    Err(e) => warn!("wind sample failed, skipping: {:?}", defmt::Debug2Format(&e)),
-                }
-            }
+        } else {
+            info!("Battery below idle threshold, checking battery voltage again after 60s.");
+            Timer::after(Duration::from_secs(60)).await;
         }
     }
 }

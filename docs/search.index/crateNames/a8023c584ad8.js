@@ -1,0 +1,1 @@
+rd_("mhazard_sensor")

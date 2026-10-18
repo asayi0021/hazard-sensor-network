@@ -1,18 +1,86 @@
-# hazard-sensor-network-firmware
-Working repository for firmware development of the Local Hazard Network project for ANU Capstone 2026.
+# Hazard Sensor Network Firmware
 
-For more details on the project visit: https://localhazardnetwork.netlify.app/
+Firmware for the sensor node of the **Local Hazard Network** project (ANU Capstone 2026).
 
-This repository contains firmware code for the sensor node. Firmware is written for the RAK4630 module (attached to the RAK19007 baseboard), which houses a Nordic nRF52840 MCU and a Semtech SX1262 LoRa® transceiver. Interfacing with the RAK4630 are various sensor hardware and a watchdog module.
+For more details on the project, visit the [project website](https://localhazardnetwork.netlify.app/).
 
 ![Local Hazard Network FBD](Sensor_Network_FBD.png)
 
-The sensor hardware are various commercial off-the-shelf sensors that can collect various environmental data that is packaged up and sent to an external receiver using MeshCore. Sensors include: BME680 Gas Sensor (measures air quality, temperature, humidity, and pressure), SEN0575 Tipping Bucket Sensor (measures rainfall), SEN0193 Soil Moisture (measures soil moisture), and EF04083 Cup Anemometer (measures wind speed). The SEN0193 and EF04083 interfaces with the RAK module using I2C via the ADS1115 ADC to I2C, while the BME680 and SEN0575 interfaces with the RAK module directly over the same I2C bus.
+## Overview
 
-The MIKROE-4416 watchdog module interfaces with the RESET line of the RAK module and periodically receive heartbeats from the RAK module over GPIO. If the watchdog fails to receive a heartbeat from the RAK module (program crash/freezes), the watchdog automatically pulls the RESET line to reset the RAK module in hope of fixing the error.
+The firmware targets the **RAK4630** module mounted on a **RAK19007** baseboard. The RAK4630 houses a Nordic **nRF52840** MCU and a Semtech **SX1262** LoRa® transceiver. Environmental data is collected from commercial off-the-shelf sensors, packaged up, and sent to an external receiver using [MeshCore](https://github.com/meshcore-dev/MeshCore).
 
+## Hardware
 
+### Sensors
 
-There are two separate binaries:
-`hazard-sensor` contains the firmware for the RAK4630 module and drivers for the sensor hardware and watchdog module.
-`demo` contains the binary for running a meshcore client to talk to the sensor node and gather data. The data is uploaded to an InfluxDB container so that it can be processed externally.
+| Sensor | Measures | Interface |
+|--------|----------|-----------|
+| BME680 | Air quality (gas), temperature, humidity, pressure | I2C (direct) |
+| SEN0575 Tipping Bucket | Rainfall | I2C (direct) |
+| SEN0193 | Soil moisture | ADS1115 ADC → I2C |
+| EF04083 Cup Anemometer | Wind speed | ADS1115 ADC → I2C |
+
+The BME680 and SEN0575 share the same I2C bus as the ADS1115.
+
+### Watchdog
+
+The **MIKROE-4416** watchdog module is connected to the RAK module's `RESET` line and receives periodic heartbeats from the RAK module over GPIO. If a heartbeat is not received (e.g. the program crashes or freezes), the watchdog pulls `RESET` to restart the RAK module.
+
+## Repository Structure
+
+```
+hazard-sensor-network/
+├── hazard-sensor/   # Rust (Cargo) project: RAK4630 firmware, sensor and watchdog drivers
+└── demo/            # Python MeshCore client that logs sensor data to InfluxDB
+```
+
+| Binary | Description |
+|--------|-------------|
+| `hazard-sensor` | Firmware for the RAK4630 module, including drivers for the sensor hardware and the watchdog module. |
+| `demo` | A MeshCore client that communicates with the sensor node and collects data for demonstration purposes. Data is uploaded to an InfluxDB container for external processing. |
+
+## Building and Flashing the Firmware
+
+### Prerequisites
+
+- [Rust toolchain](https://rustup.rs/) with the `thumbv7em-none-eabi` target:
+```sh
+  rustup target add thumbv7em-none-eabi
+```
+- [probe-rs](https://probe.rs/docs/getting-started/installation/) for flashing and debug logging
+- An **SWD debugger** (e.g. J-Link, ST-Link, or CMSIS-DAP probe) connected to the SWD pins of the nRF52840
+
+### Build and flash
+
+With the debugger plugged in and connected to the RAK4630, run the following from the `hazard-sensor/` directory:
+
+```sh
+cd hazard-sensor
+cargo run --release
+```
+
+This builds the firmware, flashes it to the nRF52840 using `probe-rs`, and streams `defmt` log output to your terminal.
+
+### Configuration
+
+Build settings are in `hazard-sensor/.cargo/config.toml`:
+
+- **Target:** `thumbv7em-none-eabi` (set as the default, so no `--target` flag is needed)
+- **Runner:** `probe-rs run --chip nRF52840_xxAA`
+- **Log level:** `DEFMT_LOG = "debug"`. Change this (e.g. `info`, `warn`) to adjust log verbosity.
+
+The config also contains commented-out alternative runners (`flash.ps1` / `flash.sh`) for flashing without `probe-rs`.
+
+## Running the Demo
+
+The demo connects to the sensor node over MeshCore and uploads received readings to InfluxDB.
+
+```sh
+cd demo
+python meshcore_influxdb_logger.py
+```
+
+Ensure a MeshCore repeater node (such as the WisMesh Repeater Mini) is paired to the PC via Bluetooth before running the client.
+
+The demo code is stable for Python version 3.13.2 and InfluxDB3 version 3.12.0.

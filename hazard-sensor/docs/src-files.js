@@ -1,2 +1,0 @@
-createSrcSidebar('[["hazard_sensor",["",[["sensors",[],["adc_sensors.rs","gas_sensor.rs","mod.rs","tipping_bucket.rs","watchdog.rs"]]],["main.rs","network.rs"]]]]');
-//{"start":19,"fragment_lengths":[142]}

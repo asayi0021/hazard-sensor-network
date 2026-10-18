@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_MM_PER_TIP","EXPECTED_PID","EXPECTED_VID"],"enum":["Registers","SensorError"],"struct":["RainfallSensor"]};

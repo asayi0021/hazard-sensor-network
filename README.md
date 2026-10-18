@@ -82,3 +82,7 @@ python meshcore_influxdb_logger.py
 Ensure a MeshCore repeater node (such as the WisMesh Repeater Mini) is paired to the PC via Bluetooth before running the client.
 
 The demo code is stable for Python version 3.13.2 and InfluxDB3 version 3.12.0.
+
+## Documentation
+
+API documentation: [hazard-sensor docs](https://asayi0021.github.io/hazard-sensor-network/hazard_sensor/)

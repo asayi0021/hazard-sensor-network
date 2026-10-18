@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["LOOKUP_TABLE_1","LOOKUP_TABLE_2"],"enum":["GSMode","Registers","SensorError"],"struct":["CalibrationData","GasSensor"]};

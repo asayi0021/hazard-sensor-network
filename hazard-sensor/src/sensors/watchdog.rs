@@ -16,8 +16,7 @@ use defmt::{Format, debug};
 use embassy_time::Timer;
 use embedded_hal::digital::{Error, ErrorKind, OutputPin};
 
-/// Watchdog Timer driver for the MIKROE-4416 Watchdog Click (TPS3430),
-/// with SET0 hardwired to 3V3.
+/// Watchdog Timer driver for the MIKROE-4416 Watchdog Click (TPS3430), with SET0 hardwired to 3V3.
 pub struct WatchdogTimer<WDI, S1> {
     /// GPIO output connected to the WDI ("pet"/feed) pin.
     wdi: WDI,

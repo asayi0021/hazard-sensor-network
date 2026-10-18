@@ -1,9 +1,0 @@
-(function() {
-    const implementors = Object.fromEntries([["darling_core",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/convert/trait.AsRef.html\" title=\"trait core::convert::AsRef\">AsRef</a>&lt;<a class=\"enum\" href=\"syn/expr/enum.Expr.html\" title=\"enum syn::expr::Expr\">Expr</a>&gt; for <a class=\"struct\" href=\"darling_core/util/struct.Callable.html\" title=\"struct darling_core::util::Callable\">Callable</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/convert/trait.AsRef.html\" title=\"trait core::convert::AsRef\">AsRef</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.95.0/std/primitive.str.html\">str</a>&gt; for <a class=\"struct\" href=\"darling_core/util/struct.IdentString.html\" title=\"struct darling_core::util::IdentString\">IdentString</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/convert/trait.AsRef.html\" title=\"trait core::convert::AsRef\">AsRef</a>&lt;<a class=\"struct\" href=\"proc_macro2/struct.Ident.html\" title=\"struct proc_macro2::Ident\">Ident</a>&gt; for <a class=\"struct\" href=\"darling_core/util/struct.IdentString.html\" title=\"struct darling_core::util::IdentString\">IdentString</a>",0],["impl&lt;T&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.95.0/core/convert/trait.AsRef.html\" title=\"trait core::convert::AsRef\">AsRef</a>&lt;T&gt; for <a class=\"struct\" href=\"darling_core/util/struct.SpannedValue.html\" title=\"struct darling_core::util::SpannedValue\">SpannedValue</a>&lt;T&gt;",0]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":59,"fragment_lengths":[1508]}

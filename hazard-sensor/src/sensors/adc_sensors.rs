@@ -102,7 +102,8 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         }
     }
 
-    /// Read from arbitrary amount of registers in a single transaction based on the given buffer size.
+    /// Read from arbitrary amount of registers in a single transaction based on
+    /// the given buffer size.
     async fn read(&mut self, reg_addr: Registers, buf: &mut [u8]) -> Result<(), SensorError> {
         let reg_cp = reg_addr.clone();
 
@@ -141,10 +142,6 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
                 // init_config: OS=0, MUX=101, PGA=000, MODE=1 (single-shot)
                 self.write(Registers::Config, &[0b1101_0001, 0b1000_0011]).await?;
             },
-            // SensorSelect::Battery => {
-            //     // init_config: OS=0, MUX=110, PGA=000, MODE=1 (single-shot)
-            //     self.write(Registers::Config, &[0b0110_0001, 0b1000_0011]).await?;
-            // },
         }
         Ok(())
     }
@@ -172,6 +169,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(())
     }
 
+    /// Return the mV reading of the ADC for the selected sensor.
     async fn get_adc_reading_mv(&mut self, input: SensorSelect) -> Result<u32, SensorError> {
         self.select_input_and_trigger(input).await?;
         self.wait_for_conversion().await?;
@@ -191,14 +189,6 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(voltage_mv)
     }
 
-    // Get voltage reading of direction sensor via 16-bit ADC.
-    // pub async fn get_direction_reading(&mut self) -> Result<u16, SensorError> {
-    //     let voltage_mv = self.get_adc_reading_mv(Sen).await?;
-    //     let degrees = (voltage_mv * 360) / 5000;
-
-    //     Ok(degrees.min(360) as u16)
-    // }
-
     /// Get soil moisture reading from ADC and return moisutre in %.
     pub async fn get_soil_moisture(&mut self) -> Result<f32, SensorError> {
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::SoilMoisture).await?;
@@ -208,7 +198,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         Ok(moisture)
     }
 
-    /// Get raw soil moisture ADC reading.
+    /// Return raw soil moisture ADC reading.
     pub async fn get_raw_soil_moisture(&mut self) -> Result<u32, SensorError> {
         let voltage_mv = self.get_adc_reading_mv(SensorSelect::SoilMoisture).await?;
         debug!("soil moisture sensor voltage: {}", voltage_mv);
@@ -231,7 +221,6 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
         // ADC conversion and compensation
         const ADC_COMPENSATION_FACTOR: f32 = 1.73;
         const ADC_CONVERSION_FACTOR: f32 = 0.87890625; // 1/2^12 * 0.6/(1/6) * 1000 (mV/LSB)
-        // Need to verify above value
 
         // ADC sampling
         let mut raw = [0i16];
@@ -247,6 +236,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> AdcSensors<I2C> {
 }
 
 impl WindHistory {
+    /// Initialise new wind history
     pub const fn new() -> Self {
         Self {
             samples: [0.0; WIND_HISTORY_LEN],
@@ -264,17 +254,17 @@ impl WindHistory {
         }
     }
 
-    /// Number of samples currently held (0..=60).
+    /// Return number of samples currently held (0..=60).
     pub fn len(&self) -> usize {
         self.len
     }
 
-    /// The `i`th most recent sample (0 = newest). Caller guarantees i < len.
+    /// Return the `i`th most recent sample (0 = newest). Caller guarantees i < len.
     fn recent(&self, i: usize) -> f32 {
         self.samples[(self.next + WIND_HISTORY_LEN - 1 - i) % WIND_HISTORY_LEN]
     }
 
-    /// Mean of the most recent `minutes` samples (one sample per minute).
+    /// Return mean of the most recent `minutes` samples (one sample per minute).
     ///
     /// If fewer than `minutes` samples exist yet (e.g. just after boot), the
     /// mean of whatever is available is returned. Returns `None` if the
@@ -289,7 +279,7 @@ impl WindHistory {
     }
 }
 
-// Approximate mapping battery voltage (mV) to %
+/// Approximate mapping battery voltage (mV) to %
 fn mv_to_percent(mv: f32) -> Result<u8, SensorError> {
     // Mapping error boundaries
     const VBAT_MIN_MV: f32 = 2500.0;

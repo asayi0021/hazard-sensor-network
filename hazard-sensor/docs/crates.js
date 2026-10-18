@@ -1,2 +1,2 @@
-window.ALL_CRATES = ["cortex_m_macros","cortex_m_rt_macros","darling","darling_core","darling_macro","defmt_macros","defmt_parser","document_features","embassy_executor_macros","fnv","ident_case","litrs","proc_macro2","quote","strsim","syn","thiserror","thiserror_impl","unicode_ident","zerocopy_derive"];
-//{"start":21,"fragment_lengths":[17,21,10,15,16,15,15,20,26,6,13,8,14,8,9,6,12,17,16,18]}
+window.ALL_CRATES = ["hazard_sensor"];
+//{"start":21,"fragment_lengths":[15]}

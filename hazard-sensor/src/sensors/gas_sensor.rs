@@ -191,7 +191,8 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         }
     }
 
-    /// Read from arbitrary amount of registers in a single transaction based on the given buffer size.
+    /// Read from arbitrary amount of registers in a single transaction
+    /// based on the given buffer size.
     async fn read_bytes(&mut self, start_reg: Registers, buf: &mut [u8]) -> Result<(), SensorError> {
         let reg_cp = start_reg.clone();
         match self.i2c.write_read(self.addr, &[start_reg as u8], buf).await {
@@ -208,9 +209,10 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     }
 
     /// Reads the gas-heater calibration/trim data from the sensor.
-    /// Must be called once (e.g. from an `init()` step) before computing
-    /// any res_heat_x value.
-    /// Must pass in raw I2C bus and address since it is called before constructor is fully initialised.
+    ///
+    /// Must be called once (e.g. from an `init()` step) before computing any
+    /// res_heat_x value. Must pass in raw I2C bus and address since it is called
+    /// before constructor is fully initialised.
     async fn read_calibration_raw(i2c: &mut I2C, addr: u8) -> Result<CalibrationData, SensorError> {
         // res_heat_val (0x00) and res_heat_range (bits 5:4 of 0x02)
         let mut buf0 = [0u8; 4];
@@ -309,8 +311,9 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         res_heat_x as u8
     }
 
-    /// Encodes a heating duration in milliseconds into the gas_wait_x register format:
+    /// Encodes a heating duration in milliseconds into the gas_wait_x register format
     /// bits<5:0> = value (0-63), bits<7:6> = multiplier factor (00=x1, 01=x4, 10=x16, 11=x64).
+    ///
     /// Max representable duration is 63 * 64 = 4032ms.
     async fn encode_gas_wait(duration_ms: u16) -> u8 {
         const MAX_DURATION_MS: u16 = 0xFC0; // 4032ms
@@ -331,7 +334,8 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
     }
 
     /// Initial configuration based on BME860 quick start guide.
-    /// Needs to be called after `new`.
+    ///
+    /// Needs to be called after `new()`.
     pub async fn init_config(&mut self) -> Result<(), SensorError> {
         debug!("Configuring GAS SENSOR...");
         // Set humidity oversampling
@@ -410,6 +414,9 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         Ok(final_res)
     }
 
+    /// Computes compensated temperature (in degrees Celsisus) from raw ADC temperature.
+    ///
+    /// Also returns t_fine that is used for calculating the compensated pressure.
     async fn calc_temp(&mut self, temp_adc: u32) -> [i32; 2] {
         let var1 = (temp_adc as i32 >> 3) - ((self.calibration.par_t1 as i32) << 1);
         let var2 = (var1 * self.calibration.par_t2 as i32) >> 11;
@@ -420,6 +427,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         [temp_comp, t_fine]
     }
 
+    /// Returns compensated temperature in degrees Celsius.
     async fn get_temp(&mut self) -> Result<[i32; 2], SensorError> {
         // Covers MSB (0x22), LSB (0x23), XLSB (0x24) registers for temperature
         let mut read_buf = [0; 3];
@@ -432,8 +440,8 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         Ok(final_temp)
     }
 
-    /// Computes compensated humidity (in milli%) from raw ADC humidity and temp_comp
-    /// (the calculated temperature compensation value).
+    /// Computes compensated humidity (in milli%) from raw ADC humidity and
+    /// temp_comp (the calculated temperature compensation value).
     async fn calc_humidity(&self, hum_adc: u16, temp_comp: i32) -> u32 {
         let par_h1 = self.calibration.par_h1 as i32;
         let par_h2 = self.calibration.par_h2 as i32;
@@ -464,7 +472,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         hum_comp as u32
     }
 
-    /// Returns compensated humidity in milli%, still need to divide data by 1000.
+    /// Returns compensated humidity in milli%.
     async fn get_humidity(&mut self, temp_comp: i32) -> Result<u32, SensorError> {
         // Covers MSB (0x25) and LSB (0x26) registers for humidity
         let mut read_buf = [0; 2];
@@ -478,7 +486,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
 
     /// Computes compensated pressure (in Pa) from raw ADC pressure and t_fine
     /// (the intermediate value produced during temperature compensation).
-    // From AI: Rust panics on integer overflow in debug builds (unlike C, which silently wraps). This formula is designed by Bosch to stay within i32 range for realistic sensor inputs, so it should be fine in practice — but if you ever do hit a panic here during testing, it's a legitimate signal that an upstream value (bad calibration read, corrupted ADC data) is out of the expected range, not something to just wrap around and ignore.
+    // AI Note: Rust panics on integer overflow in debug builds (unlike C, which silently wraps). This formula is designed by Bosch to stay within i32 range for realistic sensor inputs, so it should be fine in practice — but if you ever do hit a panic here during testing, it's a legitimate signal that an upstream value (bad calibration read, corrupted ADC data) is out of the expected range, not something to just wrap around and ignore.
     async fn calc_pressure(&self, press_adc: u32, t_fine: i32) -> u32 {
         let par_p1 = self.calibration.par_p1 as i32;
         let par_p2 = self.calibration.par_p2 as i32;
@@ -525,6 +533,7 @@ impl<I2C: embedded_hal_async::i2c::I2c> GasSensor<I2C> {
         press_comp
     }
 
+    /// Returns compensated pressure in Pa.
     async fn get_pressure(&mut self, t_fine: i32) -> Result<u32, SensorError> {
         // Covers MSB (0x1F), LSB (0x20) and XLSB (0x21) registers for humidity
         let mut read_buf = [0; 3];

@@ -70,8 +70,6 @@ Build settings are in `hazard-sensor/.cargo/config.toml`:
 - **Runner:** `probe-rs run --chip nRF52840_xxAA`
 - **Log level:** `DEFMT_LOG = "debug"`. Change this (e.g. `info`, `warn`) to adjust log verbosity.
 
-The config also contains commented-out alternative runners (`flash.ps1` / `flash.sh`) for flashing without `probe-rs`.
-
 ## Running the Demo
 
 The demo connects to the sensor node over MeshCore and uploads received readings to InfluxDB.

@@ -37,8 +37,6 @@ bind_interrupts!(struct Irqs {
 
 /// Transmission buffer for I2C Bus 1
 static TX_BUFF1: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
-/// Transmission buffer for I2C Bus 2
-static TX_BUFF2: ConstStaticCell<[u8; 16]> = ConstStaticCell::new([0; 16]);
 
 /// I2C shared bus for RainfallSensor (tbs), GasSensor (aqs)
 static I2C_BUS: StaticCell<Mutex<NoopRawMutex, twim::Twim>> = StaticCell::new();
@@ -54,9 +52,6 @@ pub static MESHCORE_TX_BUFF: Channel<CriticalSectionRawMutex, heapless::Vec<u8, 
 /// fall outside the acceptable time window.
 pub static CLOCK_OFFSET: AtomicI32 = AtomicI32::new(1789439994);
 pub static CLOCK_SYNCED: AtomicBool = AtomicBool::new(false);
-
-/// Second local clock, purely for
-// CLOCK_UPTIME = CLOCK_OFFSET - 1789439994
 
 /// Gas sensor I2C slave address
 const GAS_SENSOR_ADDR: u8 = 0x77;
@@ -81,17 +76,13 @@ pub struct NRF52840 {
 }
 
 impl NRF52840 {
+    /// Initialise a new nRF52840 struct
     pub fn new(
         twispi0: Peri<'static, peripherals::TWISPI0>,
         sda: Peri<'static, peripherals::P0_13>,
         scl: Peri<'static, peripherals::P0_14>,
         saadc_pin: Peri<'static, peripherals::SAADC>,
         adc_battery_pin: Peri<'static, peripherals::P0_05>,
-        // twispi1: Peri<'static, peripherals::TWISPI1>,
-        // sda2: Peri<'static, peripherals::P0_15>,
-        // scl2: Peri<'static, peripherals::P0_16>,
-        // adc_channel0: Peri<'static, peripherals::P0_31>,
-        // adc_channel1: Peri<'static, peripherals::P0_03>,
     ) -> Self {
         // Initialise config for each bus
         let i2c_config = twim::Config::default();
@@ -124,6 +115,7 @@ pub struct SX1262 {
 }
 
 impl SX1262 {
+    /// Initialise a new SX1262 struct
     pub async fn new(
         // SX1262 pins
         reset: Peri<'static, peripherals::P1_06>,    // In RAK4630 datasheet, the DIO2
@@ -424,16 +416,10 @@ async fn radio_task(
 #[embassy_executor::task]
 async fn watchdog_task(mut watchdog: WatchdogTimer<Output<'static>, Output<'static>>) {
     let mut ticker = Ticker::every(Duration::from_millis(1100));
-    // let mut counter = 0;         // uncomment counter logic for watchdog test
     loop {
         ticker.next().await;
-        // if counter == 25 {
-        //     debug!("breaking out of watchdog pulse loop");
-        //     break;
-        // }
         if watchdog.send_pulse().await.is_err() {
             error!("watchdog pulse failed");
         }
-        // counter += 1;
     }
 }

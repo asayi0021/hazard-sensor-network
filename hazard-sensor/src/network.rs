@@ -52,15 +52,6 @@ pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need 
 const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
 const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1;
 
-// Battery level check - related constants
-// const PIN_VBAT: u8 = 0;        NEED TO BE p.AIN3 ?                 // Represents analog pin A0/0 depending on your BSP
-// const VBAT_MV_PER_LSB: f32 = 0.73242188_f32;    // 3.0V ADC range / 12-bit resolution
-// const VBAT_DIVIDER: f32 = 0.4_f32;              // Resistor divider ratio
-// const VBAT_DIVIDER_COMP: f32 = 1.73_f32;        // Empirical compensation factor
-// // Combined scaling factor
-// const REAL_VBAT_MV_PER_LSB: f32 = VBAT_DIVIDER_COMP * VBAT_MV_PER_LSB;
-
-
 //======================================================================================================================
 //----MeshCore protcol level firmware-----------------------------------------------------------------------------------
 //======================================================================================================================
@@ -196,7 +187,7 @@ impl HashSize {
 // Currently only implemented request type is to send all data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum RequestKey {
-    DataAll,            // Data from full sensor suite 
+    DataAll,            // Data from full sensor suite
     // Below keys are for extending request functionality to peripheral specific requests.
     Wss,   // "WSS"     // Wind speed sensor - defaults to 1hr avg
     Wss0,  // "WSS0"    // Instantaneous wind speed
@@ -205,10 +196,10 @@ enum RequestKey {
     Wss15, // "WSS15"
     Wss30, // "WSS30"
     // Wds, // "WDS"      // Wind direction sensor
-    Aqs,   // "AQS"     // Air quality sensor 
-    Sms,   // "SMS"     // Soil moisture sensor 
-    Tbs,   // "TBS"     // Tipping bucket sensor 
-    Bat,   // "BAT"     // Battery level 
+    Aqs,   // "AQS"     // Air quality sensor
+    Sms,   // "SMS"     // Soil moisture sensor
+    Tbs,   // "TBS"     // Tipping bucket sensor
+    Bat,   // "BAT"     // Battery level
     Upt,   // "UPT"     // Uptime (time from last reboot)
 }
 
@@ -248,7 +239,7 @@ impl RequestKey {
         }
         let text = core::str::from_utf8(&plaintext[4..]).ok()?;
         let tag = Self::node_tag();
-        
+
         // Split on anything that isn't a letter, digit or '#'. This also strips the
         // 0x00 flags byte that follows the timestamp.
         let is_sep = |c: char| !(c.is_ascii_alphanumeric() || c == '#');
@@ -257,9 +248,6 @@ impl RequestKey {
         if !text.split(is_sep).any(|t| t == tag.as_str()) {
             return None;
         }
-        // if !text.contains(tag.as_str()) {
-        //     return None;
-        // }
 
         const KEYWORDS: [(&str, RequestKey); 12] = [
             (RequestKey::DATA_ALL_KEYWORD, RequestKey::DataAll),
@@ -277,9 +265,6 @@ impl RequestKey {
             (RequestKey::UPT_KEYWORD, RequestKey::Upt),
         ];
 
-        // KEYWORDS.iter().find_map(|&(keyword, key)| {
-        //     text.contains(keyword).then_some(key)
-        // })
         text.split(is_sep).find_map(|tok| {
             KEYWORDS.iter().find(|(k, _)| *k == tok).map(|&(_, key)| key)
         })
@@ -536,7 +521,6 @@ fn send_group_text(text: &str) -> Result<(), EncodeError> {
 
 /// Send all sensor data to the public channel.
 pub fn send_group_text_sensor_data(r: &SensorReadings) -> Result<(), EncodeError> {
-    // let json = Packet::encode_payload(&r.wss, &r.wds, &r.aqs, &r.sms, &r.tbs)?;
     let json = Packet::encode_payload(&r)?;
     let mut response_text: heapless::String<{ MAX_JSON_LEN + 32 }> = heapless::String::new();
     write!(response_text, "hazard-sensor-{:#04x}: {}", NODE_ID, json).map_err(|_| EncodeError::PayloadTooLong)?;
@@ -553,11 +537,10 @@ fn send_group_text_single_sensor(key: RequestKey, r: &SensorReadings) -> Result<
         RequestKey::Wss10 => write!(json, "{{\"wss_10\":{}}}", r.wss.ok_or(EncodeError::SensorDataNotFound)?),
         RequestKey::Wss15 => write!(json, "{{\"wss_15\":{}}}", r.wss.ok_or(EncodeError::SensorDataNotFound)?),
         RequestKey::Wss30 => write!(json, "{{\"wss_30\":{}}}", r.wss.ok_or(EncodeError::SensorDataNotFound)?),
-        // RequestKey::Wds => write!(json, "{{\"wds\":{}}}", r.wds),
-        RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}", 
-        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.0, 
-        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.1, 
-        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.2, 
+        RequestKey::Aqs => write!(json, "{{\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{}}}",
+        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.0,
+        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.1,
+        r.aqs.ok_or(EncodeError::SensorDataNotFound)?.2,
         r.aqs.ok_or(EncodeError::SensorDataNotFound)?.3),
         RequestKey::Sms => write!(json, "{{\"sms\":{}}}", r.sms.ok_or(EncodeError::SensorDataNotFound)?),
         RequestKey::Tbs => write!(json, "{{\"tbs\":{}}}", r.tbs.ok_or(EncodeError::SensorDataNotFound)?),
@@ -599,11 +582,10 @@ fn sync_clock_from_received(received_timestamp: u32) {
 /// Process incoming frame data, react according to packet content.
 pub async fn frame_handler(
     raw_frame_data: &[u8],
-//     wds: &mut WindDirectionSensor,
     aqs: &mut GasSensor<I2cShared>,
     adc: &mut AdcSensors<I2cShared>,
     tbs: &mut RainfallSensor<I2cShared>,
-    wind_history:&mut WindHistory,  
+    wind_history:&mut WindHistory,
 ) {
     match Packet::decode(raw_frame_data) {
         Ok(pkt) => {
@@ -903,13 +885,11 @@ pub async fn poll_all(
     wind_history: &mut WindHistory,
 ) -> SensorReadings {
     let wss_data = wind_history.average_last(60);
-    // let wss_data = poll_wss(adc).await;// LIVE WSS DATA MAY BE BETTER
-    // let wds_data = poll_wds(wds).await;
     let aqs_data = poll_aqs(aqs).await;
     let sms_data = poll_sms(adc).await;
     let tbs_data = poll_tbs(tbs).await;
 
-    // Currently battery level is left out of broadcasts and data requests. 
+    // Currently battery level is left out of broadcasts and data requests.
     SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: None}
 }
 
@@ -948,10 +928,6 @@ async fn poll_req(
             let wss_data = wind_history.average_last(30);
             return SensorReadings { wss:wss_data, aqs:None, sms:None, tbs:None, bat: None }
         }
-        // RequestKey::Wds => {
-        // let wds_data = poll_wds(adc).await;
-        // reutrn SensorReadings { wss:None, wds:Some(wds_data), aqs:None, sms:None, tbs:None}
-        // }
         RequestKey::Aqs => {
             let aqs_data = poll_aqs(aqs).await;
              return SensorReadings { wss:None, aqs:aqs_data, sms:None, tbs:None, bat: None }
@@ -959,7 +935,7 @@ async fn poll_req(
         RequestKey::Sms => {
             let sms_data = poll_sms(adc).await;
             return SensorReadings { wss:None, aqs:None, sms:sms_data, tbs:None, bat: None }
-        } 
+        }
         RequestKey::Tbs => {
             let tbs_data = poll_tbs(tbs).await;
             return SensorReadings { wss:None, aqs:None, sms:None, tbs:tbs_data, bat: None}
@@ -985,8 +961,8 @@ async fn poll_req(
     }
 }
 
-/// Set of sensor specific polling functions that return the raw data values.
-// Note this function polls for instantaneous wind speed. 
+/// Poll wind speed sensor for raw data.
+// Note this function polls for instantaneous wind speed.
 async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> Option<f32> { //i16
     match adc.get_wind_speed().await {
         Ok(r) => {
@@ -999,10 +975,8 @@ async fn poll_wss(adc: &mut AdcSensors<I2cShared>) -> Option<f32> { //i16
         }
     }
 }
-// async fn poll_wds(adc: &mut AdcSensors) -> f32 {
-//     let r = adc.get_wind_direction().await;
-//     return r
-// }
+
+/// Poll gas sensor sensor for raw data.
 async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> Option<(f64, f64, f64, u8)> { // Option<(f64, f64, f64, u8)>
     match aqs.get_measurements().await{
         Ok(r) => {
@@ -1015,6 +989,8 @@ async fn poll_aqs(aqs: &mut GasSensor<I2cShared>) -> Option<(f64, f64, f64, u8)>
         }
     }
 }
+
+/// Poll soil moisture sensor for raw data.
 async fn poll_sms(adc: &mut AdcSensors<I2cShared>) -> Option<f32> {
     match adc.get_soil_moisture().await {
         Ok(r) => {
@@ -1027,6 +1003,8 @@ async fn poll_sms(adc: &mut AdcSensors<I2cShared>) -> Option<f32> {
         }
     }
 }
+
+/// Poll tipping bucket sensor for raw data.
 async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> Option<f64> {
     match tbs.get_rainfall_last_hour().await {
         Ok(r) => {
@@ -1039,14 +1017,6 @@ async fn poll_tbs(tbs: &mut RainfallSensor<I2cShared>) -> Option<f64> {
         }
     }
 }
-
-/// Average wind speed over the last `minutes` minutes (km/h).
-/// Uses whatever is available if the node has been up for less than `minutes`.
-/// Returns 0.0 with a warning if no samples exist yet. 
-/// May be worth getting rid of this function
-// fn poll_wss_avg(wind: &WindHistory, minutes: usize) -> Option<f32> {
-//     wind.average_last(minutes)
-// }
 
 /// Reads the battery level as percent.
 async fn read_bat(adc: &mut AdcSensors<I2cShared>) -> Result<u8, SensorError> {

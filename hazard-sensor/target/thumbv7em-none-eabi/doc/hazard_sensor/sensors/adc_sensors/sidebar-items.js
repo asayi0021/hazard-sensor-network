@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["SOIL_DRY_BOUND","SOIL_RANGE","SOIL_WET_BOUND","WIND_HISTORY_LEN"],"enum":["Registers","SensorError","SensorSelect"],"fn":["mv_to_percent"],"struct":["AdcSensors","WindHistory"]};

@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["hazard_sensor",[["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/adc_sensors/enum.Registers.html\" title=\"enum hazard_sensor::sensors::adc_sensors::Registers\">Registers</a>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/adc_sensors/enum.SensorError.html\" title=\"enum hazard_sensor::sensors::adc_sensors::SensorError\">SensorError</a><div class=\"where\">where\n    ErrorKind: Format,</div>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/gas_sensor/enum.Registers.html\" title=\"enum hazard_sensor::sensors::gas_sensor::Registers\">Registers</a>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/gas_sensor/enum.SensorError.html\" title=\"enum hazard_sensor::sensors::gas_sensor::SensorError\">SensorError</a><div class=\"where\">where\n    ErrorKind: Format,</div>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/tipping_bucket/enum.Registers.html\" title=\"enum hazard_sensor::sensors::tipping_bucket::Registers\">Registers</a>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/tipping_bucket/enum.SensorError.html\" title=\"enum hazard_sensor::sensors::tipping_bucket::SensorError\">SensorError</a><div class=\"where\">where\n    ErrorKind: Format,</div>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/watchdog/enum.WatchdogError.html\" title=\"enum hazard_sensor::sensors::watchdog::WatchdogError\">WatchdogError</a>",0],["impl Format for <a class=\"enum\" href=\"hazard_sensor/sensors/watchdog/enum.WatchdogWindow.html\" title=\"enum hazard_sensor::sensors::watchdog::WatchdogWindow\">WatchdogWindow</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[1660]}

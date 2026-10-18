@@ -5,7 +5,7 @@ For more details on the project visit: https://localhazardnetwork.netlify.app/
 
 This repository contains firmware code for the sensor node. Firmware is written for the RAK4630 module (attached to the RAK19007 baseboard), which houses a Nordic nRF52840 MCU and a Semtech SX1262 LoRa® transceiver. Interfacing with the RAK4630 are various sensor hardware and a watchdog module.
 
-![Local Hazard Network FBD](Sensor Network FBD.png)
+![Local Hazard Network FBD](Sensor_Network_FBD.png)
 
 The sensor hardware are various commercial off-the-shelf sensors that can collect various environmental data that is packaged up and sent to an external receiver using MeshCore. Sensors include: BME680 Gas Sensor (measures air quality, temperature, humidity, and pressure), SEN0575 Tipping Bucket Sensor (measures rainfall), SEN0193 Soil Moisture (measures soil moisture), and EF04083 Cup Anemometer (measures wind speed). The SEN0193 and EF04083 interfaces with the RAK module using I2C via the ADS1115 ADC to I2C, while the BME680 and SEN0575 interfaces with the RAK module directly over the same I2C bus.
 

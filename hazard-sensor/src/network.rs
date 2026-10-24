@@ -1,12 +1,12 @@
 use lora_phy::mod_params::{Bandwidth, CodingRate, SpreadingFactor};
 use heapless::{String,Vec};
-use defmt::{info, warn, error};
+use defmt::{info, warn, error, debug};
 use core::fmt::Write;
 use sha2::{Digest, Sha256};
 use aes::Aes128;
 use aes::cipher::{BlockCipherEncrypt, BlockCipherDecrypt, Array, KeyInit};
 use hmac::{Hmac, Mac};
-use embassy_time::Instant;
+use embassy_time::{with_timeout, Duration, Instant};
 use core::sync::atomic::Ordering;
 
 // Imported objects/functions from main and sensors module.
@@ -51,6 +51,13 @@ pub const CODING_RATE: CodingRate = CodingRate::_4_5; // _4_5 to _4_8, may need 
 /// everything." Extend with more variants in further iterations
 const RAW_CUSTOM_REQUEST_TAG: u8 = 0xA0;
 const RAW_CUSTOM_RESPONSE_TAG: u8 = 0xA1;
+
+// Set this comfortably above your worst-case time-on-air
+// (depends on SF, bandwidth and payload size).
+const TX_TIMEOUT: Duration = Duration::from_secs(7);
+
+// Threshold for battery voltage to put node into psuedo idle state.
+const VOLTAGE_THRESHOLD: f32 = 3.1;
 
 //======================================================================================================================
 //----MeshCore protcol level firmware-----------------------------------------------------------------------------------
@@ -1051,5 +1058,17 @@ async fn read_bat(adc: &mut AdcSensors<I2cShared>) -> Result<u8, SensorError> {
             error!("Error reading battery voltage: {}.", defmt::Debug2Format(&e));
             Err(e)
         }
+    }
+}
+
+/// Returns flag if battery is below safe threshold - determined by VOLTAGE_THRESHOLD
+pub async fn check_bat_threshold(adc: &mut AdcSensors<I2cShared>) -> bool {
+    let bat_mv = adc.get_battery_mv().await;
+    let bat_v = bat_mv /1000 as f32;
+    info!("bat_v measured for checking battery voltage threshold: {:?}", bat_v);
+    if bat_v > VOLTAGE_THRESHOLD {
+        true
+    }else{
+        false
     }
 }

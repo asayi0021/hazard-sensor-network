@@ -6,7 +6,7 @@ mod sensors;
 mod network;
 
 // Imports from other modules
-use crate::network::{frame_handler, send_frame, poll_all, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM};
+use crate::network::{frame_handler, send_frame, poll_all, BANDWIDTH, CODING_RATE, FREQ_HZ, MAX_PACKET_LEN, SPREADING_FACTOR, TX_POWER_DBM, check_bat_threshold};
 use crate::sensors::{watchdog::{WatchdogTimer, WatchdogWindow},gas_sensor::GasSensor,adc_sensors::{AdcSensors, WindHistory},tipping_bucket::RainfallSensor}; //
 
 // Embassy imports

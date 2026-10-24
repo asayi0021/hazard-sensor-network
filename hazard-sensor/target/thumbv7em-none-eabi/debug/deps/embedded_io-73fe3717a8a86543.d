@@ -1,0 +1,9 @@
+C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\target\thumbv7em-none-eabi\debug\deps\embedded_io-73fe3717a8a86543.d: C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\lib.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\mod.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_mut.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_ref.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\../README.md
+
+C:\Users\Ken Doan\Documents\ANU\ENGN4300\hazard-sensor-network\hazard-sensor\target\thumbv7em-none-eabi\debug\deps\libembedded_io-73fe3717a8a86543.rmeta: C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\lib.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\mod.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_mut.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_ref.rs C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\../README.md
+
+C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\lib.rs:
+C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\mod.rs:
+C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_mut.rs:
+C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\impls\slice_ref.rs:
+C:\Users\Ken\ Doan\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\embedded-io-0.7.1\src\../README.md:

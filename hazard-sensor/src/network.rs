@@ -744,11 +744,24 @@ pub async fn send_frame(
         warn!("prepare_for_tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
         return;
     }
-    // Attempt transmission
-    if let Err(e) = radio.lora_radio.tx().await {
-        warn!("tx failed in send_frame: {:?}", defmt::Debug2Format(&e));
-    } else {
-        info!("TX successful, {} bytes sent", frame.len())
+
+    debug!("TRANSMITTING FRAME...");
+
+    // Attempt transmission, bounded by a timeout
+    match with_timeout(TX_TIMEOUT, radio.lora_radio.tx()).await {
+        Ok(Ok(())) => info!("TX successful, {} bytes sent", frame.len()),
+        Ok(Err(e)) => warn!("tx failed in send_frame: {:?}", defmt::Debug2Format(&e)),
+        Err(_) => {
+            warn!("tx timed out in send_frame after {} ms", TX_TIMEOUT.as_millis());
+            // The dropped future leaves the radio mid-TX, so put it back in a known state.
+            if let Err(e) = radio.lora_radio.init().await {
+                warn!("init failed after tx timeout: {:?}", defmt::Debug2Format(&e));
+            }
+            debug!("RADIO REINITIALIZED");
+            if let Err(e) = radio.lora_radio.enter_standby().await {
+                warn!("enter_standby failed after tx timeout: {:?}", defmt::Debug2Format(&e));
+            }
+        }
     }
 }
 

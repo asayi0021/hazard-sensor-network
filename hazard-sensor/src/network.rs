@@ -43,8 +43,8 @@ type HmacSha256 = Hmac<Sha256>;
 pub const TX_POWER_DBM: i32 = 22; // Assumes the antenna will have 8dBi gain.
 pub const FREQ_HZ: u32 = 915_800_000; // Must be in Hz
 pub const BANDWIDTH: Bandwidth = Bandwidth::_250KHz;
-pub const SPREADING_FACTOR: SpreadingFactor = SpreadingFactor::_12;
-pub const CODING_RATE: CodingRate = CodingRate::_4_8; // _4_5 to _4_8, may need to reduce CR later to increase efficiency.
+pub const SPREADING_FACTOR: SpreadingFactor = SpreadingFactor::_7;
+pub const CODING_RATE: CodingRate = CodingRate::_4_5; // _4_5 to _4_8, may need to reduce CR later to increase efficiency.
 
 // RawCustom handling - currently used as group text tag as well
 /// Single-byte request as RawCustom payload. Only one kind exists for now: "send me
@@ -352,12 +352,13 @@ impl<'a> Packet<'a> {
         let (tmp, hum, prs, aqi) = r.aqs.ok_or(EncodeError::SensorDataNotFound)?;
         let sms = r.sms.ok_or(EncodeError::SensorDataNotFound)?;
         let tbs = r.tbs.ok_or(EncodeError::SensorDataNotFound)?;
+        let bat = r.bat.ok_or(EncodeError::SensorDataNotFound)?;
 
         let mut payload: String<MAX_JSON_LEN> = String::new();
         write!(
             payload,
-            "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{}}}",
-            wss, tmp, hum, prs, aqi, sms, tbs
+            "{{\"wss\":{},\"aqs_tmp\":{},\"aqs_hum\":{},\"aqs_prs\":{},\"aqs_aqi\":{},\"sms\":{},\"tbs\":{},\"bat\":{}}}",
+            wss, tmp, hum, prs, aqi, sms, tbs, bat
         )
         .map_err(|_| EncodeError::PayloadTooLong)?;
         Ok(payload)
@@ -884,13 +885,21 @@ pub async fn poll_all(
     tbs: &mut RainfallSensor<I2cShared>,
     wind_history: &mut WindHistory,
 ) -> SensorReadings {
-    let wss_data = wind_history.average_last(60);
+    // let wss_data = wind_history.average_last(60);
+    let wss_data = poll_wss(adc).await;
     let aqs_data = poll_aqs(aqs).await;
     let sms_data = poll_sms(adc).await;
     let tbs_data = poll_tbs(tbs).await;
+    let bat_data = match read_bat(adc).await{
+            Ok(bat) => Some(bat),
+            Err(e) => {
+                error!("poll_all read_bat error: {:?}", defmt::Debug2Format(&e));
+                None
+            }
+        };
 
     // Currently battery level is left out of broadcasts and data requests.
-    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: None}
+    SensorReadings { wss: wss_data, aqs: aqs_data, sms: sms_data, tbs: tbs_data, bat: bat_data}
 }
 
 /// Poll the requested sensors returning partially populated sensor readings.

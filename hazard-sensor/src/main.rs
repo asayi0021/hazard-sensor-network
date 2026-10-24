@@ -63,7 +63,7 @@ const RAINFALL_SENSOR_ADDR: u8 = 0x1D;
 const ADC_SENSOR_ADDR: u8 = 0x48;
 
 /// Telemetry frequency constants (seconds)
-const BROADCAST_PERIOD: u64 = 30; // 3600 WHEN NOT TESTING - NEED TO CHANGE
+const BROADCAST_PERIOD: u64 = 3; // 3600 WHEN NOT TESTING - NEED TO CHANGE
 const WIND_SAMPLE_PERIOD_SECS: u64 = 60;
 
 /// Shortened type for GasSensor and RainfallSensor objects
